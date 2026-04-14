@@ -21,23 +21,27 @@ const Dashboard = () => {
     monthlyConsumption: '1,240' 
   });
 
-  useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const res = await axios.get('http://127.0.0.1:8000/get-meters');
-        const meters = res.data;
-        setStats(prev => ({
-          ...prev,
-          totalMeters: meters.length,
-          activeMeters: meters.filter(m => m.status === 'פעיל').length,
-          alerts: meters.filter(m => m.status === 'תקול').length
-        }));
-      } catch (error) {
-        console.error("שגיאה בטעינת נתונים לדשבורד:", error);
-      }
-    };
-    fetchStats();
-  }, []);
+useEffect(() => {
+  const fetchStats = async () => {
+    try {
+      // שימוש במשתנה סביבה, ואם הוא לא קיים - שימוש ב-Localhost
+      const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://127.0.0.1:8000';
+      
+      const res = await axios.get(`${API_BASE_URL}/get-meters`);
+      const meters = res.data;
+      
+      setStats(prev => ({
+        ...prev,
+        totalMeters: meters.length,
+        activeMeters: meters.filter(m => m.status === 'פעיל').length,
+        alerts: meters.filter(m => m.status === 'תקול').length
+      }));
+    } catch (error) {
+      console.error("שגיאה בטעינת נתונים לדשבורד:", error);
+    }
+  };
+  fetchStats();
+}, []);
 
   return (
     <div style={{...containerStyle, padding: isMobile ? '15px' : '30px'}}>
