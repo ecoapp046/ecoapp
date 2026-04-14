@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import api from '../api/api'; // שימוש ב-instance המרכזי
+import api from '../../api/api';
 import { Upload, X } from 'lucide-react';
-import { useIsMobile } from '../hooks/useIsMobile';
+import { useIsMobile } from '../../hooks/useIsMobile';
 
 const CreateTaskModal = ({ isOpen, onClose, onTaskCreated }) => {
   const isMobile = useIsMobile();

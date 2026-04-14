@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import api from '../api/api'; // ייבוא ה-instance של axios
+import api from '../../api/api';
 import { X } from 'lucide-react';
 
 function AddReadingModal({ isOpen, onClose, meterId, onSuccess }) {

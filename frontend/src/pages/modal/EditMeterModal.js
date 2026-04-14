@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import api from '../api/api'; // שימוש ב-instance המרכזי של axios
+import api from '../../api/api';
 import { X, Save, User, Phone, Mail, Users, MapPin, Info, Edit3 } from 'lucide-react';
-import { useIsMobile } from '../hooks/useIsMobile';
+import { useIsMobile } from '../../hooks/useIsMobile';
 
 function EditMeterModal({ isOpen, onClose, meterData, onSuccess }) {
   const isMobile = useIsMobile();

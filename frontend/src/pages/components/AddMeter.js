@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import api from '../api/api'; // שימוש ב-instance המרכזי
+import api from '../../api/api';
 import { X, Check, AlertCircle } from 'lucide-react';
-import { useIsMobile } from '../hooks/useIsMobile';
+import { useIsMobile } from '../../hooks/useIsMobile';
 
 const AddMeter = ({ isOpen, onClose, settlements, onMeterAdded }) => {
   const isMobile = useIsMobile();
