@@ -23,5 +23,12 @@ def home():
 
 if __name__ == "__main__":
     import uvicorn
-    # שים לב: עדיף להשתמש ב-reload=True בזמן פיתוח כדי שהשרת יתעדכן כשאתה שומר קבצים
-    uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)
+    import os
+
+    # בענן, השרת יספק לנו את הפורט דרך משתנה סביבה שנקרא PORT
+    # אם אנחנו במחשב האישי, נשתמש בברירת מחדל 8000
+    port = int(os.environ.get("PORT", 8000))
+    
+    # שינוי ה-host ל-0.0.0.0 מאפשר גישה חיצונית
+    # חשוב: ב-Production (ענן) נהוג לכבות את ה-reload
+    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=True)

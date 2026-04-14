@@ -6,21 +6,7 @@ from database import db
 router = APIRouter()
 
 # --- עדכון המודל כך שיתאים לשדות החדשים בטופס הדיווח ---
-class Task(BaseModel):
-    title: str
-    description: Optional[str] = ""
-    priority: str = "בינונית"
-    status: str = "פתוח"
-    assigned_to: Optional[str] = ""
-    # שדות חדשים שהוספנו בעיצוב החדש:
-    type: Optional[str] = "נזילה"
-    location: Optional[str] = ""        # ישוב
-    address: Optional[str] = ""         # כתובת
-    neighborhood: Optional[str] = ""    # שכונה
-    water_line: Optional[str] = ""      # קו מים
-    depth: Optional[str] = ""           # עומק קו
-    notes: Optional[str] = ""           # הערות
-    due_date: Optional[str] = ""        # תאריך יעד (אופציונלי)
+
 
 @router.get("/get-tasks")
 async def get_tasks():
