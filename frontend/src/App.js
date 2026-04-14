@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import Sidebar from '/pages/components/Sidebar';
+import Sidebar from './pages/components/Sidebar';
 import MetersList from './pages/MetersList';
 import TechnicianHome from './pages/TechnicianHome';
 import MeterDetails from './pages/MeterDetails';
