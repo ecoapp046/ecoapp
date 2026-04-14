@@ -15,7 +15,7 @@ import {
   Menu,
   X
 } from 'lucide-react';
-import { useIsMobile } from '../../../hooks/useIsMobile';
+import { useIsMobile } from '../../hooks/useIsMobile';
 
 const Sidebar = () => {
   const navigate = useNavigate();
