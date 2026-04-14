@@ -1,0 +1,14 @@
+# Node (Frontend)
+frontend/node_modules/
+frontend/build/
+frontend/.env
+
+# Python (Backend)
+backend/__pycache__/
+backend/venv/
+backend/.venv
+*.pyc
+
+# Security - חשוב מאוד!
+backend/serviceAccountKey.json
+.env
