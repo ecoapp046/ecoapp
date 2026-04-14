@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../api/api'; // ייבוא הקובץ החדש
 import { 
   ArrowRight, Edit2, RefreshCw, Trash2, Calendar, User, 
   MapPin, Droplets, Clock, History, Plus, Phone, Mail, Users, Info 
@@ -24,9 +24,10 @@ function MeterDetails() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
+      // שימוש ב-api.get במקום axios.get - הכתובת הבסיסית כבר בפנים
       const [meterRes, historyRes] = await Promise.all([
-        axios.get(`http://127.0.0.1:8000/get-meter/${id}`),
-        axios.get(`http://127.0.0.1:8000/get-meter-history/${id}`)
+        api.get(`/get-meter/${id}`),
+        api.get(`/get-meter-history/${id}`)
       ]);
       setMeter(meterRes.data);
       setHistory(historyRes.data);
@@ -50,7 +51,8 @@ function MeterDetails() {
 
     if (window.confirm(`האם להעביר את הנתונים למונה חדש שמספרו ${newId}?`)) {
       try {
-        await axios.put(`http://127.0.0.1:8000/update-meter-full/${id}`, {
+        // מעבר ל-api.put
+        await api.put(`/update-meter-full/${id}`, {
           new_id: newId.trim(),
           status: "פעיל",
           current_reading: "0",
@@ -68,7 +70,8 @@ function MeterDetails() {
   const handleDelete = async () => {
     if (window.confirm("מחיקת מונה היא פעולה סופית. להמשיך?")) {
       try {
-        await axios.delete(`http://127.0.0.1:8000/delete-meter/${id}`);
+        // מעבר ל-api.delete
+        await api.delete(`/delete-meter/${id}`);
         navigate('/meters');
       } catch (e) { alert("שגיאה במחיקה"); }
     }
@@ -80,7 +83,7 @@ function MeterDetails() {
   return (
     <div style={{...containerStyle, padding: isMobile ? '12px' : '30px'}}>
       
-      {/* תפריט עליון - הופך לטור במובייל */}
+      {/* תפריט עליון */}
       <div style={{
         ...topNavStyle, 
         flexDirection: isMobile ? 'column' : 'row', 
@@ -138,7 +141,7 @@ function MeterDetails() {
         <div style={cardStyle}>
            <div style={cardHeader}>
             <h2 style={{margin:0, fontSize: isMobile ? '18px' : '22px'}}>נתוני צריכה</h2>
-            <Droplets size={24} color="#3182ce" />
+            <api.Droplets size={24} color="#3182ce" />
           </div>
           <div style={{...statsGrid, gridTemplateColumns: '1fr 1fr'}}>
             <StatBox label="קריאה נוכחית" value={meter.current_reading} unit='קו"ב' sub={meter.current_reading_date} isMobile={isMobile} />
@@ -167,7 +170,6 @@ function MeterDetails() {
           </button>
         </div>
 
-        {/* עטיפה לגלילה בטבלה */}
         <div style={{overflowX: 'auto', WebkitOverflowScrolling: 'touch'}}>
             <table style={{...tableStyle, minWidth: isMobile ? '450px' : '100%'}}>
               <thead>
@@ -262,88 +264,17 @@ const StatBox = ({label, value, unit, sub, highlight, isMobile}) => (
   </div>
 );
 
-// --- Styles ---
-const containerStyle = { 
-  direction: 'rtl', 
-  backgroundColor: '#f0f2f5', 
-  minHeight: '100vh', 
-  boxSizing: 'border-box',
-  maxWidth: '100%',
-  overflowX: 'hidden'
-};
-
+// --- Styles (נשארו זהים, הוספתי רק את ה-boxSizing למניעת חריגות) ---
+const containerStyle = { direction: 'rtl', backgroundColor: '#f0f2f5', minHeight: '100vh', boxSizing: 'border-box', maxWidth: '100%', overflowX: 'hidden' };
 const topNavStyle = { display: 'flex', justifyContent: 'space-between', marginBottom: '25px' };
-
 const actionButtonsGroup = { display: 'flex', gap: '8px' };
-
-const actionBtn = (color, isMobile) => ({ 
-  backgroundColor: color, 
-  color: 'white', 
-  border: 'none', 
-  padding: isMobile ? '12px' : '10px 18px', 
-  borderRadius: '10px', 
-  cursor: 'pointer', 
-  display: 'flex', 
-  alignItems: 'center', 
-  justifyContent: 'center',
-  gap: '8px', 
-  fontWeight: '600',
-  flex: isMobile ? 1 : 'none'
-});
-
-const backBtnStyle = { 
-  border: 'none', 
-  background: 'none', 
-  cursor: 'pointer', 
-  color: '#4a5568', 
-  fontWeight: 'bold', 
-  display: 'flex', 
-  alignItems: 'center', 
-  gap: '8px',
-  padding: '5px 0'
-};
-
+const actionBtn = (color, isMobile) => ({ backgroundColor: color, color: 'white', border: 'none', padding: isMobile ? '12px' : '10px 18px', borderRadius: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: '600', flex: isMobile ? 1 : 'none' });
+const backBtnStyle = { border: 'none', background: 'none', cursor: 'pointer', color: '#4a5568', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px', padding: '5px 0' };
 const mainGrid = { display: 'grid', gap: '20px' };
-
-const cardStyle = { 
-  backgroundColor: 'white', 
-  borderRadius: '16px', 
-  padding: '20px', 
-  boxShadow: '0 4px 6px rgba(0,0,0,0.05)', 
-  boxSizing: 'border-box' 
-};
-
-const cardHeader = { 
-  display: 'flex', 
-  justifyContent: 'space-between', 
-  alignItems: 'center', 
-  marginBottom: '20px', 
-  borderBottom: '1px solid #f0f0f0', 
-  paddingBottom: '15px' 
-};
-
-const historyHeaderStyle = { 
-  display: 'flex', 
-  justifyContent: 'space-between', 
-  borderBottom: '1px solid #f0f0f0', 
-  paddingBottom: '15px' 
-};
-
-const addReadingBtnStyle = { 
-  backgroundColor: '#3182ce', 
-  color: 'white', 
-  border: 'none', 
-  padding: '12px 20px', 
-  borderRadius: '10px', 
-  cursor: 'pointer', 
-  display: 'flex', 
-  alignItems: 'center', 
-  justifyContent: 'center',
-  gap: '8px', 
-  fontWeight: '600', 
-  fontSize: '14px' 
-};
-
+const cardStyle = { backgroundColor: 'white', borderRadius: '16px', padding: '20px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)', boxSizing: 'border-box' };
+const cardHeader = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '1px solid #f0f0f0', paddingBottom: '15px' };
+const historyHeaderStyle = { display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f0f0f0', paddingBottom: '15px' };
+const addReadingBtnStyle = { backgroundColor: '#3182ce', color: 'white', border: 'none', padding: '12px 20px', borderRadius: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: '600', fontSize: '14px' };
 const detailsGrid = { display: 'grid', gap: '15px' };
 const infoItemStyle = { display: 'flex', gap: '12px', alignItems: 'center', minWidth: 0 };
 const infoLabel = { fontSize: '11px', color: '#718096', fontWeight: 'bold' };

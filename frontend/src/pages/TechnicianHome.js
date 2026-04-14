@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../api/api'; // ייבוא ה-instance המרכזי
 import { Droplets, Search, CheckCircle, ArrowRight, Hash, MapPin, Calendar } from 'lucide-react';
-import { useIsMobile } from '../hooks/useIsMobile'; // ייבוא ה-Hook
+import { useIsMobile } from '../hooks/useIsMobile';
 
 function TechnicianHome() {
   const isMobile = useIsMobile();
@@ -13,7 +13,7 @@ function TechnicianHome() {
 
   const fetchMeters = async () => {
     try {
-      const response = await axios.get('http://127.0.0.1:8000/get-meters');
+      const response = await api.get('/get-meters');
       setMeters(response.data);
     } catch (error) {
       console.error("שגיאה במשיכת מונים:", error);
@@ -33,6 +33,7 @@ function TechnicianHome() {
     e.preventDefault();
     if (!selectedMeter) return alert("אנא בחר מונה מהרשימה");
 
+    // וולידציה בסיסית - מניעת הזנת קריאה נמוכה מהקודמת ללא אישור
     if (parseFloat(currentValue) < (parseFloat(selectedMeter.current_reading) || 0)) {
       if (!window.confirm("שים לב: הקריאה שהזנת נמוכה מהקריאה הקודמת. האם להמשיך?")) {
         return;
@@ -41,12 +42,12 @@ function TechnicianHome() {
 
     setLoading(true);
     try {
-      await axios.post('http://127.0.0.1:8000/submit-reading', {
+      await api.post('/submit-reading', {
         meter_id: selectedMeter.id,
         customer_name: selectedMeter.customer_name,
         location: selectedMeter.settlement_name || "לא הוגדר",
         current_value: parseFloat(currentValue),
-        technician_id: "Tech_Shomron_01"
+        technician_id: "Tech_Shomron_01" // כאן אפשר יהיה בעתיד למשוך את ה-ID מה-Context של המשתמש
       });
 
       alert(`הקריאה למונה ${selectedMeter.id} נשמרה בהצלחה!`);
@@ -241,6 +242,7 @@ function TechnicianHome() {
       <style>{`
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         @keyframes slideUp { from { transform: translateY(15px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        /* הסתרת חיצים באינפוט מספרים */
         input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
       `}</style>
     </div>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../api/api'; // הייבוא החדש שלך
 import { useNavigate } from 'react-router-dom';
 import { 
   Droplets, 
@@ -9,7 +9,7 @@ import {
   PlusCircle, 
   ClipboardList 
 } from 'lucide-react';
-import { useIsMobile } from '../hooks/useIsMobile'; // ייבוא ה-Hook
+import { useIsMobile } from '../hooks/useIsMobile';
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -21,27 +21,25 @@ const Dashboard = () => {
     monthlyConsumption: '1,240' 
   });
 
-useEffect(() => {
-  const fetchStats = async () => {
-    try {
-      // שימוש במשתנה סביבה, ואם הוא לא קיים - שימוש ב-Localhost
-      const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://127.0.0.1:8000';
-      
-      const res = await axios.get(`${API_BASE_URL}/get-meters`);
-      const meters = res.data;
-      
-      setStats(prev => ({
-        ...prev,
-        totalMeters: meters.length,
-        activeMeters: meters.filter(m => m.status === 'פעיל').length,
-        alerts: meters.filter(m => m.status === 'תקול').length
-      }));
-    } catch (error) {
-      console.error("שגיאה בטעינת נתונים לדשבורד:", error);
-    }
-  };
-  fetchStats();
-}, []);
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        // עכשיו משתמשים ב-api.get ולא צריך כתובת מלאה
+        const res = await api.get('/get-meters');
+        const meters = res.data;
+        
+        setStats(prev => ({
+          ...prev,
+          totalMeters: meters.length,
+          activeMeters: meters.filter(m => m.status === 'פעיל').length,
+          alerts: meters.filter(m => m.status === 'תקול').length
+        }));
+      } catch (error) {
+        console.error("שגיאה בטעינת נתונים לדשבורד:", error);
+      }
+    };
+    fetchStats();
+  }, []);
 
   return (
     <div style={{...containerStyle, padding: isMobile ? '15px' : '30px'}}>
@@ -50,7 +48,6 @@ useEffect(() => {
         <p style={subtitleStyle}>ברוך הבא למערכת ניהול המים.</p>
       </header>
 
-      {/* כרטיסי סיכום - Grid רספונסיבי */}
       <div style={{
         ...statsGridStyle, 
         gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(200px, 1fr))'
@@ -85,7 +82,6 @@ useEffect(() => {
         ...contentGridStyle, 
         gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr'
       }}>
-        {/* פעולות מהירות */}
         <div style={cardStyle}>
           <h3 style={cardTitleStyle}>פעולות מהירות</h3>
           <div style={{
@@ -101,7 +97,6 @@ useEffect(() => {
           </div>
         </div>
 
-        {/* הודעות מערכת */}
         <div style={cardStyle}>
           <h3 style={cardTitleStyle}>עדכונים אחרונים</h3>
           <div style={updateItemStyle}>
@@ -136,61 +131,16 @@ const containerStyle = { direction: 'rtl', minHeight: '100vh', backgroundColor: 
 const headerStyle = { marginBottom: '25px' };
 const titleStyle = { fontWeight: 'bold', color: '#2d3748', margin: 0 };
 const subtitleStyle = { color: '#718096', marginTop: '5px', fontSize: '14px' };
-
 const statsGridStyle = { display: 'grid', gap: '20px', marginBottom: '30px' };
-
-const statCardStyle = { 
-  padding: '20px', 
-  borderRadius: '16px', 
-  display: 'flex', 
-  alignItems: 'center', 
-  gap: '15px', 
-  backgroundColor: 'white',
-  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)',
-  border: '1px solid #edf2f7'
-};
-
-const iconContainerStyle = { 
-  width: '50px', 
-  height: '50px', 
-  borderRadius: '12px', 
-  display: 'flex', 
-  alignItems: 'center', 
-  justifyContent: 'center',
-  flexShrink: 0
-};
-
+const statCardStyle = { padding: '20px', borderRadius: '16px', display: 'flex', alignItems: 'center', gap: '15px', backgroundColor: 'white', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)', border: '1px solid #edf2f7' };
+const iconContainerStyle = { width: '50px', height: '50px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 };
 const statLabelStyle = { fontSize: '13px', color: '#718096', fontWeight: '500' };
 const statValueStyle = { fontSize: '22px', fontWeight: 'bold', color: '#2d3748' };
-
 const contentGridStyle = { display: 'grid', gap: '20px' };
-const cardStyle = { 
-  backgroundColor: 'white', 
-  padding: '25px', 
-  borderRadius: '16px', 
-  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)',
-  border: '1px solid #edf2f7',
-  boxSizing: 'border-box'
-};
-
+const cardStyle = { backgroundColor: 'white', padding: '25px', borderRadius: '16px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)', border: '1px solid #edf2f7', boxSizing: 'border-box' };
 const cardTitleStyle = { fontSize: '18px', fontWeight: 'bold', marginBottom: '20px', color: '#2d3748' };
 const actionsGridStyle = { display: 'flex', gap: '15px' };
-const actionButtonStyle = { 
-  flex: 1, 
-  display: 'flex', 
-  alignItems: 'center', 
-  justifyContent: 'center', 
-  gap: '10px', 
-  padding: '15px', 
-  borderRadius: '12px', 
-  border: '1px solid #e2e8f0', 
-  backgroundColor: '#f8fafc', 
-  cursor: 'pointer', 
-  fontWeight: '600',
-  color: '#2d3748',
-  fontSize: '14px'
-};
-
+const actionButtonStyle = { flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', padding: '15px', borderRadius: '12px', border: '1px solid #e2e8f0', backgroundColor: '#f8fafc', cursor: 'pointer', fontWeight: '600', color: '#2d3748', fontSize: '14px' };
 const updateItemStyle = { display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px', fontSize: '13px', color: '#4a5568' };
 const dotStyle = { width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#3182ce', flexShrink: 0 };
 

@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../api/api'; // ייבוא ה-instance של axios
 import { Plus, CheckCircle, Clock, Trash2, MapPin, Search } from 'lucide-react';
 import CreateTaskModal from './modal/CreateTaskModal';
-import { useIsMobile } from '../hooks/useIsMobile'; // וודא שהנתיב נכון אצלך
+import { useIsMobile } from '../hooks/useIsMobile';
 
 function TasksList() {
   const isMobile = useIsMobile();
@@ -21,14 +21,15 @@ function TasksList() {
 
   const fetchTasks = async () => {
     try {
-      const res = await axios.get('http://127.0.0.1:8000/get-tasks');
+      // שימוש בנתיב יחסי דרך api
+      const res = await api.get('/get-tasks');
       setTasks(res.data);
     } catch (e) { console.error("Error fetching tasks", e); }
   };
 
   const fetchSettlements = async () => {
     try {
-      const res = await axios.get('http://127.0.0.1:8000/get-settlements');
+      const res = await api.get('/get-settlements');
       setSettlements(res.data);
     } catch (e) { console.error("Error fetching settlements", e); }
   };
@@ -36,7 +37,7 @@ function TasksList() {
   const deleteTask = async (taskId) => {
     if (window.confirm("למחוק משימה זו?")) {
       try {
-        await axios.delete(`http://127.0.0.1:8000/delete-task/${taskId}`);
+        await api.delete(`/delete-task/${taskId}`);
         fetchTasks();
       } catch (e) { alert("שגיאה במחיקה"); }
     }
@@ -45,7 +46,7 @@ function TasksList() {
   const toggleStatus = async (taskId, currentStatus) => {
     const newStatus = currentStatus === 'הושלם' ? 'בטיפול' : 'הושלם';
     try {
-      await axios.put(`http://127.0.0.1:8000/update-task-status/${taskId}`, { status: newStatus });
+      await api.put(`/update-task-status/${taskId}`, { status: newStatus });
       fetchTasks();
     } catch (e) { alert("שגיאה בעדכון"); }
   };
@@ -105,7 +106,7 @@ function TasksList() {
   );
 
   return (
-    <div style={{ padding: isMobile ? '15px' : '30px', direction: 'rtl', backgroundColor: '#f7fafc', minHeight: '100vh' }}>
+    <div style={{ padding: isMobile ? '15px' : '30px', direction: 'rtl', backgroundColor: '#f7fafc', minHeight: '100vh', boxSizing: 'border-box' }}>
       
       <div style={headerStyle}>
         <div style={{textAlign: 'right'}}>
@@ -133,7 +134,7 @@ function TasksList() {
           <Search size={18} style={searchIconStyle} />
           <input 
             type="text" 
-            placeholder="חיפוש לפי מספר מונה, שם או כתובת..." 
+            placeholder="חיפוש לפי תקלה, שם או כתובת..." 
             style={searchInputStyle}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -154,45 +155,13 @@ function TasksList() {
   );
 }
 
-// --- Styles ---
+// --- Styles (ללא שינוי, הוספתי רק boxSizing למעטפת) ---
 const headerStyle = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' };
 const addBtnStyle = { backgroundColor: '#0083c2', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 'bold' };
-
-const filterRowStyle = { 
-  display: 'flex', 
-  marginBottom: '30px', 
-  width: '100%',
-  boxSizing: 'border-box'
-};
-
-const selectStyle = { 
-  padding: '10px 15px', 
-  borderRadius: '12px', 
-  border: '1px solid #e2e8f0', 
-  backgroundColor: 'white', 
-  color: '#4a5568', 
-  fontSize: '14px', 
-  outline: 'none', 
-  cursor: 'pointer'
-};
-
-const searchContainerStyle = { 
-  position: 'relative', 
-  flex: 1, 
-  display: 'flex', 
-  alignItems: 'center' 
-};
-
-const searchInputStyle = { 
-  width: '100%', 
-  padding: '10px 40px 10px 15px', 
-  borderRadius: '12px', 
-  border: '1px solid #e2e8f0', 
-  fontSize: '14px', 
-  outline: 'none',
-  boxSizing: 'border-box'
-};
-
+const filterRowStyle = { display: 'flex', marginBottom: '30px', width: '100%', boxSizing: 'border-box' };
+const selectStyle = { padding: '10px 15px', borderRadius: '12px', border: '1px solid #e2e8f0', backgroundColor: 'white', color: '#4a5568', fontSize: '14px', outline: 'none', cursor: 'pointer' };
+const searchContainerStyle = { position: 'relative', flex: 1, display: 'flex', alignItems: 'center' };
+const searchInputStyle = { width: '100%', padding: '10px 40px 10px 15px', borderRadius: '12px', border: '1px solid #e2e8f0', fontSize: '14px', outline: 'none', boxSizing: 'border-box' };
 const searchIconStyle = { position: 'absolute', right: '12px', color: '#a0aec0' };
 const gridStyle = { display: 'grid', gap: '20px' };
 const cardStyle = { backgroundColor: 'white', borderRadius: '16px', padding: '24px', border: '1px solid #edf2f7', display: 'flex', flexDirection: 'column', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' };
@@ -200,19 +169,8 @@ const cardHeader = { display: 'flex', justifyContent: 'space-between', marginBot
 const cardTitle = { fontSize: '17px', fontWeight: 'bold', margin: '0 0 8px 0', color: '#1A202C' };
 const cardDesc = { fontSize: '14px', color: '#718096', marginBottom: '15px', lineHeight: '1.4' };
 const cardFooter = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #f7fafc', paddingTop: '12px', marginTop: 'auto' };
-
-const priorityBadge = (p) => ({ 
-    backgroundColor: p === 'דחוף' || p === 'קריטית' ? '#fff5f5' : '#fffaf0', 
-    color: p === 'דחוף' || p === 'קריטית' ? '#e53e3e' : '#dd6b20', 
-    padding: '4px 10px', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold' 
-});
-
-const statusTag = (s) => ({ 
-    backgroundColor: s === 'הושלם' ? '#f0fff4' : '#fff5f5', 
-    color: s === 'הושלם' ? '#38a169' : '#e53e3e', 
-    padding: '4px 12px', borderRadius: '12px', fontSize: '12px', fontWeight: 'bold' 
-});
-
+const priorityBadge = (p) => ({ backgroundColor: p === 'דחוף' || p === 'קריטית' ? '#fff5f5' : '#fffaf0', color: p === 'דחוף' || p === 'קריטית' ? '#e53e3e' : '#dd6b20', padding: '4px 10px', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold' });
+const statusTag = (s) => ({ backgroundColor: s === 'הושלם' ? '#f0fff4' : '#fff5f5', color: s === 'הושלם' ? '#38a169' : '#e53e3e', padding: '4px 12px', borderRadius: '12px', fontSize: '12px', fontWeight: 'bold' });
 const iconBtnStyle = { border: 'none', background: 'none', cursor: 'pointer', padding: '4px' };
 
 export default TasksList;

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, 
@@ -21,9 +21,16 @@ const Sidebar = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const isMobile = useIsMobile();
-  
-  // State לניהול פתיחת התפריט במובייל
   const [isOpen, setIsOpen] = useState(false);
+
+  // מניעת גלילה של המסך כשהתפריט פתוח במובייל
+  useEffect(() => {
+    if (isMobile && isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+  }, [isOpen, isMobile]);
 
   const menuItems = [
     { icon: <LayoutDashboard size={20} />, label: 'דשבורד', path: '/' },
@@ -37,42 +44,48 @@ const Sidebar = () => {
     { icon: <MapIcon size={20} />, label: 'מפה', path: '/map' },
   ];
 
-  const toggleMenu = () => setIsOpen(!isOpen);
-
   const handleNavigate = (path) => {
     navigate(path);
-    if (isMobile) setIsOpen(false); // סגירת תפריט לאחר ניווט במובייל
+    if (isMobile) setIsOpen(false);
   };
 
   return (
     <>
-      {/* כפתור המבורגר - צף ומופיע רק במובייל */}
+      {/* כפתור המבורגר במובייל */}
       {isMobile && (
-        <button onClick={toggleMenu} style={hamburgerButtonStyle}>
+        <button 
+          onClick={() => setIsOpen(!isOpen)} 
+          style={{
+            ...hamburgerButtonStyle,
+            backgroundColor: isOpen ? '#1a1f2b' : '#3182ce'
+          }}
+        >
           {isOpen ? <X size={24} /> : <Menu size={24} />}
         </button>
       )}
 
-      {/* רקע כהה שקוף כשהתפריט פתוח במובייל */}
-      {isMobile && isOpen && <div onClick={toggleMenu} style={overlayStyle} />}
+      {/* רקע כהה (Overlay) */}
+      {isMobile && isOpen && (
+        <div onClick={() => setIsOpen(false)} style={overlayStyle} />
+      )}
 
       <aside style={{
         ...sidebarStyle,
         transform: isMobile ? (isOpen ? 'translateX(0)' : 'translateX(100%)') : 'none',
-        transition: 'transform 0.3s ease-in-out',
-        boxShadow: isMobile && isOpen ? '-5px 0 15px rgba(0,0,0,0.5)' : 'none',
+        width: isMobile ? '280px' : '240px', // תפריט מעט רחב יותר במובייל לשימוש נוח באגודל
       }}>
-        {/* לוגו וכותרת */}
+        
+        {/* לוגו */}
         <div 
           onClick={() => handleNavigate('/')} 
           style={{ ...logoSectionStyle, cursor: 'pointer' }}
         >
           <div style={logoIconStyle}>
-            <Droplets color="white" size={24} />
+            <Droplets color="white" size={22} />
           </div>
           <div style={logoTextContainer}>
             <div style={mainTitleStyle}>מערכת מים</div>
-            <div style={subTitleStyle}>ניהול תשתיות</div>
+            <div style={subTitleStyle}>ניהול ותפעול שטח</div>
           </div>
         </div>
 
@@ -85,9 +98,17 @@ const Sidebar = () => {
                 key={index} 
                 onClick={() => handleNavigate(item.path)} 
                 style={isActive ? activeItemStyle : itemStyle}
+                className="sidebar-item"
               >
-                <span style={iconStyle}>{item.icon}</span>
-                <span style={{ fontWeight: isActive ? 'bold' : 'normal' }}>{item.label}</span>
+                <span style={{ ...iconStyle, color: isActive ? '#63b3ed' : '#718096' }}>
+                  {item.icon}
+                </span>
+                <span style={{ 
+                  fontWeight: isActive ? '700' : '500',
+                  color: isActive ? 'white' : 'inherit'
+                }}>
+                  {item.label}
+                </span>
               </div>
             );
           })}
@@ -95,116 +116,126 @@ const Sidebar = () => {
 
         {/* כפתורי תחתית */}
         <div style={footerStyle}>
-          <div style={footerItemStyle} onClick={() => alert('מתנתק...')}>
+          <div style={footerItemStyle} onClick={() => console.log('Logout')}>
             <LogOut size={18} /> <span>התנתקות</span>
           </div>
-          <div style={{ ...footerItemStyle, color: '#ff6b6b' }}>
-            <Trash2 size={18} /> <span>מחיקת חשבון</span>
+          {/* אפשרות למחיקת חשבון - בדרך כלל מוסתרת או בתוך הגדרות, אבל נשמור לפי העיצוב שלך */}
+          <div style={{ ...footerItemStyle, color: '#f56565', fontSize: '12px', opacity: 0.7 }}>
+            <Trash2 size={16} /> <span>מחיקת חשבון</span>
           </div>
         </div>
       </aside>
+
+      {/* הוספת CSS פשוט לאפקט Hover (אופציונלי) */}
+      <style>{`
+        .sidebar-item:hover {
+          background-color: rgba(255, 255, 255, 0.05);
+          color: white;
+        }
+      `}</style>
     </>
   );
 };
 
-// --- עיצוב (Styles) ---
+// --- Styles (שינויים קלים לשיפור הנראות) ---
 const sidebarStyle = { 
-  width: '240px', 
   height: '100vh', 
   backgroundColor: '#1a1f2b', 
   color: '#a0aec0', 
   display: 'flex', 
   flexDirection: 'column', 
-  padding: '20px 0', 
+  padding: '24px 0', 
   position: 'fixed', 
   right: 0, 
   top: 0, 
-  borderLeft: '1px solid #2d3748', 
   zIndex: 1000,
-  direction: 'rtl'
+  direction: 'rtl',
+  transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+  borderLeft: '1px solid #2d3748'
 };
 
 const hamburgerButtonStyle = {
   position: 'fixed',
-  top: '10px',
-  right: '10px', // בגלל שאנחנו ב-RTL, הצד הימני הוא הטבעי
-  zIndex: 9999,  // הכי גבוה שיש כדי שלא יתחבא מאחורי כרטיסים
-  backgroundColor: '#3182ce',
+  top: '15px',
+  right: '15px',
+  zIndex: 10001,
   color: 'white',
   border: 'none',
-  borderRadius: '8px',
+  borderRadius: '12px',
   padding: '10px',
   display: 'flex',
   alignItems: 'center',
-  justifyContent: 'center',
-  boxShadow: '0 2px 10px rgba(0,0,0,0.3)',
-  cursor: 'pointer'
+  boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+  cursor: 'pointer',
+  transition: 'all 0.2s'
 };
 
 const overlayStyle = {
   position: 'fixed',
   top: 0,
   left: 0,
-  width: '100vw',
-  height: '100vh',
-  backgroundColor: 'rgba(0,0,0,0.6)',
+  right: 0,
+  bottom: 0,
+  backgroundColor: 'rgba(0,0,0,0.7)',
+  backdropFilter: 'blur(3px)',
   zIndex: 999
 };
 
 const logoSectionStyle = { 
   display: 'flex', 
   alignItems: 'center', 
-  padding: '0 20px 40px 20px', 
+  padding: '0 24px 32px 24px', 
   gap: '12px' 
 };
 
 const logoIconStyle = { 
-  width: '35px', 
-  height: '35px', 
+  width: '38px', 
+  height: '38px', 
   backgroundColor: '#3182ce', 
-  borderRadius: '8px', 
+  borderRadius: '10px', 
   display: 'flex', 
   alignItems: 'center', 
-  justifyContent: 'center' 
+  justifyContent: 'center',
+  boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
 };
 
 const logoTextContainer = { textAlign: 'right' };
-const mainTitleStyle = { color: 'white', fontWeight: 'bold', fontSize: '18px' };
-const subTitleStyle = { fontSize: '12px', color: '#718096' };
+const mainTitleStyle = { color: 'white', fontWeight: '800', fontSize: '18px', letterSpacing: '-0.5px' };
+const subTitleStyle = { fontSize: '11px', color: '#718096', marginTop: '-2px' };
+
 const navStyle = { 
   flex: 1, 
   overflowY: 'auto', 
-  paddingRight: '10px' 
+  padding: '0 12px' 
 };
 
 const itemStyle = { 
   display: 'flex', 
   alignItems: 'center', 
   gap: '12px', 
-  padding: '12px 20px', 
+  padding: '12px 16px', 
   cursor: 'pointer', 
-  transition: '0.2s', 
+  transition: 'all 0.2s', 
   fontSize: '15px',
-  borderRadius: '8px 0 0 8px',
-  marginBottom: '4px',
-  marginLeft: '15px'
+  borderRadius: '10px',
+  marginBottom: '4px'
 };
 
 const activeItemStyle = { 
   ...itemStyle, 
-  backgroundColor: 'rgba(49, 130, 206, 0.15)', 
-  color: '#63b3ed', 
-  borderRight: '4px solid #3182ce' 
+  backgroundColor: 'rgba(49, 130, 206, 0.2)', 
+  color: '#63b3ed',
+  boxShadow: 'inset -4px 0 0 #3182ce'
 };
 
-const iconStyle = { display: 'flex', alignItems: 'center' };
+const iconStyle = { display: 'flex', alignItems: 'center', transition: 'color 0.2s' };
 
 const footerStyle = { 
-  padding: '20px', 
+  padding: '20px 24px', 
   borderTop: '1px solid #2d3748', 
   display: 'flex', 
   flexDirection: 'column', 
-  gap: '15px' 
+  gap: '16px' 
 };
 
 const footerItemStyle = { 
@@ -213,7 +244,7 @@ const footerItemStyle = {
   gap: '10px', 
   fontSize: '14px', 
   cursor: 'pointer',
-  transition: 'color 0.2s'
+  transition: 'opacity 0.2s'
 };
 
 export default Sidebar;

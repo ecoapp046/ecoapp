@@ -1,13 +1,42 @@
-body {
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+/* index.css */
+:root {
+  --primary-blue: #3182ce;
+  --bg-gray: #f4f7fa;
+  --text-dark: #2d3748;
+  --sidebar-dark: #1a1f2b;
 }
 
-code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-    monospace;
+* {
+  box-sizing: border-box; /* מבטיח שפאדינג לא ינפח את רוחב האלמנטים */
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-gray);
+  color: var(--text-dark);
+  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  direction: rtl; /* כיוון גלובלי למערכת */
+  overflow-x: hidden; /* מניעת פס גלילה אופקי מיותר */
+}
+
+/* עיצוב פסי גלילה (Scrollbars) מודרניים */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e0;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a0aec0;
 }

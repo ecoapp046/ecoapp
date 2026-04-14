@@ -1,24 +1,26 @@
 import React, { useState } from 'react';
-import axios from 'axios';
-import { X, Check, AlertCircle, Phone, Mail, Users, MapPin } from 'lucide-react';
+import api from '../api/api'; // שימוש ב-instance המרכזי
+import { X, Check, AlertCircle } from 'lucide-react';
+import { useIsMobile } from '../hooks/useIsMobile';
 
 const AddMeter = ({ isOpen, onClose, settlements, onMeterAdded }) => {
+  const isMobile = useIsMobile();
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState('');
+  
   const [formData, setFormData] = useState({
     meter_id: '',
     customer_name: '',
     settlement_id: '',
     address: '',
-    address_detail: '', // שדה חדש
-    phone: '',          // שדה חדש
-    email: '',          // שדה חדש
-    residents_count: 1, // שדה חדש
+    address_detail: '',
+    phone: '',
+    email: '',
+    residents_count: 1,
     current_reading: 0,
     status: 'פעיל',
     type: 'משני'
   });
-  
-  const [error, setError] = useState('');
-  const [isSaving, setIsSaving] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -30,19 +32,19 @@ const AddMeter = ({ isOpen, onClose, settlements, onMeterAdded }) => {
 
     setIsSaving(true);
     try {
-      await axios.post('http://127.0.0.1:8000/add-meter', {
+      // שימוש ב-API המרכזי
+      await api.post('/add-meter', {
         ...formData,
         meter_id: cleanId,
         current_reading: formData.current_reading.toString(),
-        // המרת מספר נפשות למספר שלם
-        residents_count: parseInt(formData.residents_count) || 0
+        residents_count: parseInt(formData.residents_count) || 1
       });
 
       onMeterAdded(); 
-      onClose();      
       resetForm();
+      onClose();      
     } catch (err) {
-      const errorMsg = err.response?.data?.detail || "שגיאה בחיבור לשרת";
+      const errorMsg = err.response?.data?.detail || "שגיאה בשמירת הנתונים";
       setError(errorMsg);
     } finally {
       setIsSaving(false);
@@ -51,17 +53,10 @@ const AddMeter = ({ isOpen, onClose, settlements, onMeterAdded }) => {
 
   const resetForm = () => {
     setFormData({
-      meter_id: '',
-      customer_name: '',
-      settlement_id: '',
-      address: '',
-      address_detail: '',
-      phone: '',
-      email: '',
-      residents_count: 1,
-      current_reading: 0,
-      status: 'פעיל',
-      type: 'משני'
+      meter_id: '', customer_name: '', settlement_id: '',
+      address: '', address_detail: '', phone: '',
+      email: '', residents_count: 1, current_reading: 0,
+      status: 'פעיל', type: 'משני'
     });
     setError('');
   };
@@ -70,10 +65,14 @@ const AddMeter = ({ isOpen, onClose, settlements, onMeterAdded }) => {
 
   return (
     <div style={modalOverlayStyle}>
-      <div style={modalContentStyle}>
+      <div style={{
+        ...modalContentStyle,
+        width: isMobile ? '95%' : '650px',
+        padding: isMobile ? '20px' : '35px'
+      }}>
         <div style={modalHeaderStyle}>
           <button onClick={onClose} style={closeIconBtnStyle}><X size={20} /></button>
-          <h2 style={{ margin: 0, fontSize: '20px' }}>הוספת מונה חדש למערכת</h2>
+          <h2 style={{ margin: 0, fontSize: isMobile ? '18px' : '20px' }}>הוספת מונה חדש</h2>
         </div>
 
         {error && (
@@ -84,7 +83,10 @@ const AddMeter = ({ isOpen, onClose, settlements, onMeterAdded }) => {
         )}
 
         <form onSubmit={handleSubmit}>
-          <div style={formGridStyle}>
+          <div style={{
+            ...formGridStyle,
+            gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr'
+          }}>
             {/* פרטי זיהוי */}
             <div style={inputGroupStyle}>
               <label style={labelStyle}>מספר מונה (ID) *</label>
@@ -93,7 +95,7 @@ const AddMeter = ({ isOpen, onClose, settlements, onMeterAdded }) => {
                 style={modalInputStyle}
                 value={formData.meter_id}
                 onChange={(e) => setFormData({...formData, meter_id: e.target.value})}
-                placeholder="102030"
+                placeholder="לדוגמה: 102030"
               />
             </div>
             
@@ -104,7 +106,7 @@ const AddMeter = ({ isOpen, onClose, settlements, onMeterAdded }) => {
                 style={modalInputStyle}
                 value={formData.customer_name}
                 onChange={(e) => setFormData({...formData, customer_name: e.target.value})}
-                placeholder="ישראל ישראלי"
+                placeholder="שם מלא"
               />
             </div>
 
@@ -112,10 +114,11 @@ const AddMeter = ({ isOpen, onClose, settlements, onMeterAdded }) => {
             <div style={inputGroupStyle}>
               <label style={labelStyle}>טלפון</label>
               <input 
+                type="tel"
                 style={modalInputStyle}
                 value={formData.phone}
                 onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                placeholder="050-0000000"
+                placeholder="05X-XXXXXXX"
               />
             </div>
 
@@ -126,7 +129,7 @@ const AddMeter = ({ isOpen, onClose, settlements, onMeterAdded }) => {
                 style={modalInputStyle}
                 value={formData.email}
                 onChange={(e) => setFormData({...formData, email: e.target.value})}
-                placeholder="example@mail.com"
+                placeholder="mail@example.com"
               />
             </div>
 
@@ -152,23 +155,23 @@ const AddMeter = ({ isOpen, onClose, settlements, onMeterAdded }) => {
                 style={modalInputStyle}
                 value={formData.address}
                 onChange={(e) => setFormData({...formData, address: e.target.value})}
-                placeholder="הכלנית 5"
+                placeholder="לדוגמה: הכלנית 5"
               />
             </div>
 
-            <div style={{...inputGroupStyle, gridColumn: 'span 2'}}>
-              <label style={labelStyle}>מיקום מפורט (קומה, כניסה, הערות מיקום)</label>
+            <div style={{...inputGroupStyle, gridColumn: isMobile ? 'auto' : 'span 2'}}>
+              <label style={labelStyle}>מיקום מפורט (דירה/הערות הגעה)</label>
               <input 
                 style={modalInputStyle}
                 value={formData.address_detail}
                 onChange={(e) => setFormData({...formData, address_detail: e.target.value})}
-                placeholder="כניסה ב', קומה 2 ליד המעלית"
+                placeholder="כניסה ב', קומה 2..."
               />
             </div>
 
             {/* נתונים טכניים */}
             <div style={inputGroupStyle}>
-              <label style={labelStyle}>קריאה התחלתית</label>
+              <label style={labelStyle}>קריאה התחלתית (m³)</label>
               <input 
                 type="number"
                 style={modalInputStyle}
@@ -195,8 +198,8 @@ const AddMeter = ({ isOpen, onClose, settlements, onMeterAdded }) => {
                 value={formData.type}
                 onChange={(e) => setFormData({...formData, type: e.target.value})}
               >
-                <option value="משני">משני</option>
-                <option value="ראשי">ראשי</option>
+                <option value="משני">משני (דירתי)</option>
+                <option value="ראשי">ראשי (בנייני)</option>
               </select>
             </div>
 
@@ -207,18 +210,21 @@ const AddMeter = ({ isOpen, onClose, settlements, onMeterAdded }) => {
                 value={formData.status}
                 onChange={(e) => setFormData({...formData, status: e.target.value})}
               >
-                <option value="פעיל">פעיל</option>
-                <option value="מושבת">מושבת</option>
-                <option value="תקול">תקול</option>
+                <option value="פעיל">✅ פעיל</option>
+                <option value="מושבת">❌ מושבת</option>
+                <option value="תקול">⚠️ תקול</option>
               </select>
             </div>
           </div>
 
-          <div style={footerStyle}>
-            <button type="submit" disabled={isSaving} style={saveBtnStyle}>
-              {isSaving ? "שומר נתונים..." : <><Check size={18} /> יצירת מונה חדש</>}
-            </button>
+          <div style={{
+            ...footerStyle,
+            flexDirection: isMobile ? 'column-reverse' : 'row'
+          }}>
             <button type="button" onClick={onClose} style={cancelBtnStyle}>ביטול</button>
+            <button type="submit" disabled={isSaving} style={saveBtnStyle}>
+              {isSaving ? "שומר נתונים..." : <><Check size={18} /> הוסף מונה</>}
+            </button>
           </div>
         </form>
       </div>
@@ -226,18 +232,18 @@ const AddMeter = ({ isOpen, onClose, settlements, onMeterAdded }) => {
   );
 };
 
-// --- Styles (מעודכנים לחלונית רחבה יותר) ---
+// --- Styles ---
 const modalOverlayStyle = { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, backdropFilter: 'blur(4px)' };
-const modalContentStyle = { backgroundColor: 'white', padding: '35px', borderRadius: '20px', width: '650px', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', direction: 'rtl' };
+const modalContentStyle = { backgroundColor: 'white', borderRadius: '20px', maxHeight: '95vh', overflowY: 'auto', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', direction: 'rtl' };
 const modalHeaderStyle = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px', borderBottom: '1px solid #f0f0f0', paddingBottom: '15px' };
-const closeIconBtnStyle = { border: 'none', background: 'none', cursor: 'pointer', color: '#a0aec0', transition: 'color 0.2s' };
-const errorBannerStyle = { backgroundColor: '#fff5f5', color: '#c53030', padding: '14px', borderRadius: '10px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '14px', border: '1px solid #feb2b2' };
-const formGridStyle = { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' };
-const inputGroupStyle = { display: 'flex', flexDirection: 'column', gap: '6px' };
-const labelStyle = { fontSize: '13px', fontWeight: '700', color: '#4a5568' };
-const modalInputStyle = { padding: '12px', borderRadius: '10px', border: '1px solid #e2e8f0', outline: 'none', fontSize: '14px', backgroundColor: '#f8fafc', transition: 'all 0.2s' };
-const footerStyle = { marginTop: '35px', display: 'flex', gap: '15px' };
-const saveBtnStyle = { flex: 2, backgroundColor: '#3182ce', color: 'white', border: 'none', padding: '14px', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', boxShadow: '0 4px 6px rgba(49, 130, 206, 0.3)' };
+const closeIconBtnStyle = { border: 'none', background: 'none', cursor: 'pointer', color: '#a0aec0' };
+const errorBannerStyle = { backgroundColor: '#fff5f5', color: '#c53030', padding: '12px', borderRadius: '10px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', border: '1px solid #feb2b2' };
+const formGridStyle = { display: 'grid', gap: '15px' };
+const inputGroupStyle = { display: 'flex', flexDirection: 'column', gap: '4px' };
+const labelStyle = { fontSize: '12px', fontWeight: '700', color: '#4a5568', paddingRight: '2px' };
+const modalInputStyle = { padding: '10px 12px', borderRadius: '10px', border: '1px solid #e2e8f0', outline: 'none', fontSize: '14px', backgroundColor: '#f8fafc' };
+const footerStyle = { marginTop: '30px', display: 'flex', gap: '12px' };
+const saveBtnStyle = { flex: 2, backgroundColor: '#3182ce', color: 'white', border: 'none', padding: '14px', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' };
 const cancelBtnStyle = { flex: 1, backgroundColor: '#f7fafc', color: '#718096', border: '1px solid #e2e8f0', padding: '14px', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer' };
 
 export default AddMeter;

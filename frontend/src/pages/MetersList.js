@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../api/api'; // הייבוא המרכזי שלך
 import { useNavigate } from 'react-router-dom';
 import { Search, Plus, ChevronDown, RefreshCw } from 'lucide-react';
 import AddMeter from './components/AddMeter'; 
-import { useIsMobile } from '../hooks/useIsMobile'; // ייבוא ה-Hook
+import { useIsMobile } from '../hooks/useIsMobile';
 
 function MetersList() {
   const navigate = useNavigate();
@@ -20,9 +20,10 @@ function MetersList() {
   const fetchData = async () => {
     setLoading(true);
     try {
+      // שימוש ב-api.get במקום axios.get
       const [metersRes, settlementsRes] = await Promise.all([
-        axios.get('http://127.0.0.1:8000/get-meters'),
-        axios.get('http://127.0.0.1:8000/get-settlements')
+        api.get('/get-meters'),
+        api.get('/get-settlements')
       ]);
       setMeters(metersRes.data);
       setSettlements(settlementsRes.data);
@@ -58,7 +59,6 @@ function MetersList() {
     return acc;
   }, {});
 
-  // --- עיצוב דינמי ---
   const dynamicFilterRow = {
     ...filterContainerStyle,
     flexDirection: isMobile ? 'column' : 'row',
@@ -130,14 +130,13 @@ function MetersList() {
           <div key={city} style={groupCardStyle}>
             <div style={groupHeaderStyle}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                   <div style={blueDotStyle}></div>
-                   <span style={{ color: '#3182ce', fontWeight: 'bold', fontSize: '16px' }}>{city}</span>
-                   <span style={{ color: '#999', fontSize: '13px' }}>({groupedMeters[city].length})</span>
+                  <div style={blueDotStyle}></div>
+                  <span style={{ color: '#3182ce', fontWeight: 'bold', fontSize: '16px' }}>{city}</span>
+                  <span style={{ color: '#999', fontSize: '13px' }}>({groupedMeters[city].length})</span>
                 </div>
                 <ChevronDown size={18} color="#999" />
             </div>
 
-            {/* מעטפת גלילה לטבלה במובייל */}
             <div style={{ overflowX: 'auto', width: '100%' }}>
                 <table style={{...tableStyle, minWidth: isMobile ? '600px' : '100%'}}>
                   <thead>
@@ -200,7 +199,7 @@ function MetersList() {
   );
 }
 
-// --- Styles (שיפור Box-Sizing) ---
+// --- Styles (נשארים ללא שינוי פונקציונלי) ---
 const containerStyle = { direction: 'rtl', backgroundColor: '#f4f7fa', minHeight: '100vh', boxSizing: 'border-box' };
 const headerStyle = { display: 'flex', justifyContent: 'space-between', marginBottom: '30px' };
 const addBtnStyle = { backgroundColor: '#3182ce', color: 'white', border: 'none', padding: '12px 24px', borderRadius: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 'bold' };
