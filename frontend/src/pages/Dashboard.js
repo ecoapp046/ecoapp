@@ -1,128 +1,110 @@
 import React, { useState, useEffect } from 'react';
-import api from '../api/api'; // הייבוא החדש שלך
+import api from '../api/api';
 import { useNavigate } from 'react-router-dom';
 import { 
-  Droplets, 
-  Users, 
   AlertCircle, 
-  TrendingUp, 
   PlusCircle, 
-  ClipboardList 
+  ClipboardList,
+  MapPin,
+  ChevronLeft
 } from 'lucide-react';
 import { useIsMobile } from '../hooks/useIsMobile';
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
-  const [stats, setStats] = useState({
-    totalMeters: 0,
-    activeMeters: 0,
-    alerts: 0,
-    monthlyConsumption: '1,240' 
-  });
+  const [alertsBySettlement, setAlertsBySettlement] = useState({});
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchStats = async () => {
+    const fetchAlerts = async () => {
       try {
-        // עכשיו משתמשים ב-api.get ולא צריך כתובת מלאה
         const res = await api.get('/get-meters');
         const meters = res.data;
         
-        setStats(prev => ({
-          ...prev,
-          totalMeters: meters.length,
-          activeMeters: meters.filter(m => m.status === 'פעיל').length,
-          alerts: meters.filter(m => m.status === 'תקול').length
-        }));
+        // קיבוץ תקלות לפי יישוב
+        const grouped = meters.reduce((acc, meter) => {
+          if (meter.status === 'תקול') {
+            const settlement = meter.settlement || 'ללא יישוב';
+            acc[settlement] = (acc[settlement] || 0) + 1;
+          }
+          return acc;
+        }, {});
+
+        setAlertsBySettlement(grouped);
       } catch (error) {
         console.error("שגיאה בטעינת נתונים לדשבורד:", error);
+      } finally {
+        setLoading(false);
       }
     };
-    fetchStats();
+    fetchAlerts();
   }, []);
 
   return (
     <div style={{...containerStyle, padding: isMobile ? '15px' : '30px'}}>
       <header style={headerStyle}>
-        <h1 style={{...titleStyle, fontSize: isMobile ? '24px' : '28px'}}>סקירה כללית</h1>
-        <p style={subtitleStyle}>ברוך הבא למערכת ניהול המים.</p>
+        <h1 style={{...titleStyle, fontSize: isMobile ? '24px' : '28px'}}>ניהול תקלות לפי יישובים</h1>
+        <p style={subtitleStyle}>מרכז בקרה ותפעול שטח</p>
       </header>
 
-      <div style={{
-        ...statsGridStyle, 
-        gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(200px, 1fr))'
-      }}>
-        <StatCard 
-          icon={<Droplets color="#3182ce" />} 
-          label="סה-כ מונים" 
-          value={stats.totalMeters} 
-          color="#ebf8ff" 
-        />
-        <StatCard 
-          icon={<Users color="#38a169" />} 
-          label="מונים פעילים" 
-          value={stats.activeMeters} 
-          color="#f0fff4" 
-        />
-        <StatCard 
-          icon={<AlertCircle color="#e53e3e" />} 
-          label="תקלות פתוחות" 
-          value={stats.alerts} 
-          color="#fff5f5" 
-        />
-        <StatCard 
-          icon={<TrendingUp color="#805ad5" />} 
-          label='צריכה חודשית (קו"ב)' 
-          value={stats.monthlyConsumption} 
-          color="#faf5ff" 
-        />
-      </div>
-
-      <div style={{
-        ...contentGridStyle, 
-        gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr'
-      }}>
-        <div style={cardStyle}>
-          <h3 style={cardTitleStyle}>פעולות מהירות</h3>
-          <div style={{
-            ...actionsGridStyle, 
-            flexDirection: isMobile ? 'column' : 'row'
-          }}>
-            <button onClick={() => navigate('/meters')} style={actionButtonStyle}>
-              <PlusCircle size={20} /> הוספת קריאה/מונה
-            </button>
-            <button onClick={() => navigate('/technician-report')} style={actionButtonStyle}>
-              <ClipboardList size={20} /> דיווח מהשטח
-            </button>
-          </div>
-        </div>
-
-        <div style={cardStyle}>
-          <h3 style={cardTitleStyle}>עדכונים אחרונים</h3>
-          <div style={updateItemStyle}>
-            <div style={dotStyle}></div>
-            <span>המערכת סונכרנה בהצלחה מול השרת.</span>
-          </div>
-          <div style={updateItemStyle}>
-            <div style={dotStyle}></div>
-            <span>לא זוהו חריגות צריכה ב-24 השעות האחרונות.</span>
-          </div>
+      {/* חלק הפעולות המהירות - נשאר למעלה לגישה נוחה */}
+      <div style={cardStyle}>
+        <h3 style={cardTitleStyle}>פעולות מהירות</h3>
+        <div style={{
+          ...actionsGridStyle, 
+          flexDirection: isMobile ? 'column' : 'row'
+        }}>
+          <button onClick={() => navigate('/meters')} style={actionButtonStyle}>
+            <PlusCircle size={20} /> הוספת קריאה/מונה
+          </button>
+          <button onClick={() => navigate('/technician-report')} style={actionButtonStyle}>
+            <ClipboardList size={20} /> דיווח מהשטח
+          </button>
         </div>
       </div>
+
+      <h3 style={{...cardTitleStyle, marginTop: '30px'}}>תקלות פתוחות</h3>
+      
+      {loading ? (
+        <p>טוען נתונים...</p>
+      ) : Object.keys(alertsBySettlement).length > 0 ? (
+        <div style={{
+          ...settlementsGridStyle, 
+          gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(250px, 1fr))'
+        }}>
+          {Object.entries(alertsBySettlement).map(([name, count]) => (
+            <SettlementCard 
+              key={name}
+              name={name}
+              count={count}
+              onClick={() => navigate(`/alerts/${name}`)} // ניתוב לדף תקלות יישוב
+            />
+          ))}
+        </div>
+      ) : (
+        <div style={noAlertsStyle}>
+          <AlertCircle size={40} color="#38a169" />
+          <p>אין תקלות פתוחות כרגע. עבודה טובה!</p>
+        </div>
+      )}
     </div>
   );
 };
 
-// רכיב פנימי לכרטיס סטטיסטיקה
-const StatCard = ({ icon, label, value, color }) => (
-  <div style={statCardStyle}>
-    <div style={{ ...iconContainerStyle, backgroundColor: color }}>
-      {icon}
+// רכיב כרטיס יישוב
+const SettlementCard = ({ name, count, onClick }) => (
+  <div onClick={onClick} style={settlementCardStyle}>
+    <div style={settlementInfoStyle}>
+      <div style={iconCircleStyle}>
+        <MapPin size={20} color="#3182ce" />
+      </div>
+      <div>
+        <div style={settlementNameStyle}>{name}</div>
+        <div style={settlementCountStyle}>{count} תקלות פתוחות</div>
+      </div>
     </div>
-    <div>
-      <div style={statLabelStyle}>{label}</div>
-      <div style={statValueStyle}>{value}</div>
-    </div>
+    <ChevronLeft size={20} color="#cbd5e0" />
   </div>
 );
 
@@ -131,17 +113,29 @@ const containerStyle = { direction: 'rtl', minHeight: '100vh', backgroundColor: 
 const headerStyle = { marginBottom: '25px' };
 const titleStyle = { fontWeight: 'bold', color: '#2d3748', margin: 0 };
 const subtitleStyle = { color: '#718096', marginTop: '5px', fontSize: '14px' };
-const statsGridStyle = { display: 'grid', gap: '20px', marginBottom: '30px' };
-const statCardStyle = { padding: '20px', borderRadius: '16px', display: 'flex', alignItems: 'center', gap: '15px', backgroundColor: 'white', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)', border: '1px solid #edf2f7' };
-const iconContainerStyle = { width: '50px', height: '50px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 };
-const statLabelStyle = { fontSize: '13px', color: '#718096', fontWeight: '500' };
-const statValueStyle = { fontSize: '22px', fontWeight: 'bold', color: '#2d3748' };
-const contentGridStyle = { display: 'grid', gap: '20px' };
-const cardStyle = { backgroundColor: 'white', padding: '25px', borderRadius: '16px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)', border: '1px solid #edf2f7', boxSizing: 'border-box' };
-const cardTitleStyle = { fontSize: '18px', fontWeight: 'bold', marginBottom: '20px', color: '#2d3748' };
+const cardStyle = { backgroundColor: 'white', padding: '20px', borderRadius: '16px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)', border: '1px solid #edf2f7' };
+const cardTitleStyle = { fontSize: '18px', fontWeight: 'bold', marginBottom: '15px', color: '#2d3748' };
 const actionsGridStyle = { display: 'flex', gap: '15px' };
-const actionButtonStyle = { flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', padding: '15px', borderRadius: '12px', border: '1px solid #e2e8f0', backgroundColor: '#f8fafc', cursor: 'pointer', fontWeight: '600', color: '#2d3748', fontSize: '14px' };
-const updateItemStyle = { display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px', fontSize: '13px', color: '#4a5568' };
-const dotStyle = { width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#3182ce', flexShrink: 0 };
+const actionButtonStyle = { flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', padding: '12px', borderRadius: '12px', border: '1px solid #e2e8f0', backgroundColor: '#f8fafc', cursor: 'pointer', fontWeight: '600', color: '#2d3748', fontSize: '14px' };
+
+const settlementsGridStyle = { display: 'grid', gap: '15px' };
+const settlementCardStyle = { 
+  display: 'flex', 
+  alignItems: 'center', 
+  justifyContent: 'space-between', 
+  padding: '20px', 
+  backgroundColor: 'white', 
+  borderRadius: '16px', 
+  boxShadow: '0 2px 4px rgba(0,0,0,0.02)', 
+  border: '1px solid #edf2f7',
+  cursor: 'pointer',
+  transition: 'transform 0.2s, box-shadow 0.2s'
+};
+
+const settlementInfoStyle = { display: 'flex', alignItems: 'center', gap: '15px' };
+const iconCircleStyle = { width: '40px', height: '40px', borderRadius: '50%', backgroundColor: '#ebf8ff', display: 'flex', alignItems: 'center', justifyContent: 'center' };
+const settlementNameStyle = { fontWeight: 'bold', fontSize: '16px', color: '#2d3748' };
+const settlementCountStyle = { fontSize: '13px', color: '#e53e3e', fontWeight: '500' };
+const noAlertsStyle = { textAlign: 'center', padding: '40px', backgroundColor: 'white', borderRadius: '16px', color: '#718096' };
 
 export default Dashboard;
