@@ -16,8 +16,8 @@ import {
   X
 } from 'lucide-react';
 
-// שים לב לנתיב המעודכן (3 שלבים למעלה כדי להגיע מ-pages/components ל-hooks)
-import { useIsMobile } from '../../../hooks/useIsMobile';
+
+import { useIsMobile } from '../../hooks/useIsMobile';
 
 const Sidebar = () => {
   const navigate = useNavigate();
