@@ -1,248 +1,250 @@
-import React, { useState } from 'react';
-import api from '../../api/api'; // ✅ תוקן - שני רמות למעלה
-import { X, Check, AlertCircle } from 'lucide-react';
-import { useIsMobile } from '../../hooks/useIsMobile'; // ✅ תוקן - שני רמות למעלה
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { 
+  LayoutDashboard, 
+  Droplets, 
+  CheckSquare,
+  MapPin, 
+  Users, 
+  Package, 
+  MessageSquare, 
+  Map as MapIcon, 
+  LogOut, 
+  Trash2,
+  ClipboardEdit,
+  Menu,
+  X
+} from 'lucide-react';
 
-const AddMeter = ({ isOpen, onClose, settlements, onMeterAdded }) => {
+// שים לב לנתיב המעודכן (3 שלבים למעלה כדי להגיע מ-pages/components ל-hooks)
+import { useIsMobile } from '../../../hooks/useIsMobile';
+
+const Sidebar = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
   const isMobile = useIsMobile();
-  const [isSaving, setIsSaving] = useState(false);
-  const [error, setError] = useState('');
-  
-  const [formData, setFormData] = useState({
-    meter_id: '',
-    customer_name: '',
-    settlement_id: '',
-    address: '',
-    address_detail: '',
-    phone: '',
-    email: '',
-    residents_count: 1,
-    current_reading: 0,
-    status: 'פעיל',
-    type: 'משני'
-  });
+  const [isOpen, setIsOpen] = useState(false);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
-    
-    const cleanId = formData.meter_id.trim();
-    if (!cleanId) return setError("חובה להזין מספר מונה");
-    if (!formData.settlement_id) return setError("חובה לבחור יישוב");
-
-    setIsSaving(true);
-    try {
-      await api.post('/add-meter', {
-        ...formData,
-        meter_id: cleanId,
-        current_reading: formData.current_reading.toString(),
-        residents_count: parseInt(formData.residents_count) || 1
-      });
-
-      onMeterAdded(); 
-      resetForm();
-      onClose();      
-    } catch (err) {
-      const errorMsg = err.response?.data?.detail || "שגיאה בשמירת הנתונים";
-      setError(errorMsg);
-    } finally {
-      setIsSaving(false);
+  // מניעת גלילה של המסך כשהתפריט פתוח במובייל
+  useEffect(() => {
+    if (isMobile && isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
     }
-  };
+  }, [isOpen, isMobile]);
 
-  const resetForm = () => {
-    setFormData({
-      meter_id: '', customer_name: '', settlement_id: '',
-      address: '', address_detail: '', phone: '',
-      email: '', residents_count: 1, current_reading: 0,
-      status: 'פעיל', type: 'משני'
-    });
-    setError('');
-  };
+  const menuItems = [
+    { icon: <LayoutDashboard size={20} />, label: 'דשבורד', path: '/' },
+    { icon: <Droplets size={20} />, label: 'מונים', path: '/meters' },
+    { icon: <ClipboardEdit size={20} />, label: 'דיווח מהשטח', path: '/technician-report' },
+    { icon: <CheckSquare size={20} />, label: 'משימות', path: '/tasks' }, 
+    { icon: <MapPin size={20} />, label: 'יישובים', path: '/settlements' },
+    { icon: <Users size={20} />, label: 'עובדים', path: '/workers' },
+    { icon: <Package size={20} />, label: 'מחסן', path: '/storage' },
+    { icon: <MessageSquare size={20} />, label: 'תלונות', path: '/tickets' },
+    { icon: <MapIcon size={20} />, label: 'מפה', path: '/map' },
+  ];
 
-  if (!isOpen) return null;
+  const handleNavigate = (path) => {
+    navigate(path);
+    if (isMobile) setIsOpen(false);
+  };
 
   return (
-    <div style={modalOverlayStyle}>
-      <div style={{
-        ...modalContentStyle,
-        width: isMobile ? '95%' : '650px',
-        padding: isMobile ? '20px' : '35px'
+    <>
+      {/* כפתור המבורגר במובייל */}
+      {isMobile && (
+        <button 
+          onClick={() => setIsOpen(!isOpen)} 
+          style={{
+            ...hamburgerButtonStyle,
+            backgroundColor: isOpen ? '#1a1f2b' : '#3182ce'
+          }}
+        >
+          {isOpen ? <X size={24} /> : <Menu size={24} />}
+        </button>
+      )}
+
+      {/* רקע כהה (Overlay) */}
+      {isMobile && isOpen && (
+        <div onClick={() => setIsOpen(false)} style={overlayStyle} />
+      )}
+
+      <aside style={{
+        ...sidebarStyle,
+        transform: isMobile ? (isOpen ? 'translateX(0)' : 'translateX(100%)') : 'none',
+        width: isMobile ? '280px' : '240px',
       }}>
-        <div style={modalHeaderStyle}>
-          <button onClick={onClose} style={closeIconBtnStyle}><X size={20} /></button>
-          <h2 style={{ margin: 0, fontSize: isMobile ? '18px' : '20px' }}>הוספת מונה חדש</h2>
+        
+        {/* לוגו */}
+        <div 
+          onClick={() => handleNavigate('/')} 
+          style={{ ...logoSectionStyle, cursor: 'pointer' }}
+        >
+          <div style={logoIconStyle}>
+            <Droplets color="white" size={22} />
+          </div>
+          <div style={logoTextContainer}>
+            <div style={mainTitleStyle}>מערכת מים</div>
+            <div style={subTitleStyle}>ניהול ותפעול שטח</div>
+          </div>
         </div>
 
-        {error && (
-          <div style={errorBannerStyle}>
-            <AlertCircle size={18} />
-            <span>{error}</span>
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit}>
-          <div style={{
-            ...formGridStyle,
-            gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr'
-          }}>
-            {/* פרטי זיהוי */}
-            <div style={inputGroupStyle}>
-              <label style={labelStyle}>מספר מונה (ID) *</label>
-              <input 
-                required
-                style={modalInputStyle}
-                value={formData.meter_id}
-                onChange={(e) => setFormData({...formData, meter_id: e.target.value})}
-                placeholder="לדוגמה: 102030"
-              />
-            </div>
-            
-            <div style={inputGroupStyle}>
-              <label style={labelStyle}>שם תושב/לקוח *</label>
-              <input 
-                required
-                style={modalInputStyle}
-                value={formData.customer_name}
-                onChange={(e) => setFormData({...formData, customer_name: e.target.value})}
-                placeholder="שם מלא"
-              />
-            </div>
-
-            {/* פרטי קשר */}
-            <div style={inputGroupStyle}>
-              <label style={labelStyle}>טלפון</label>
-              <input 
-                type="tel"
-                style={modalInputStyle}
-                value={formData.phone}
-                onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                placeholder="05X-XXXXXXX"
-              />
-            </div>
-
-            <div style={inputGroupStyle}>
-              <label style={labelStyle}>אימייל</label>
-              <input 
-                type="email"
-                style={modalInputStyle}
-                value={formData.email}
-                onChange={(e) => setFormData({...formData, email: e.target.value})}
-                placeholder="mail@example.com"
-              />
-            </div>
-
-            {/* מיקום */}
-            <div style={inputGroupStyle}>
-              <label style={labelStyle}>יישוב *</label>
-              <select 
-                required
-                style={modalInputStyle}
-                value={formData.settlement_id}
-                onChange={(e) => setFormData({...formData, settlement_id: e.target.value})}
+        {/* תפריט ניווט */}
+        <nav style={navStyle}>
+          {menuItems.map((item, index) => {
+            const isActive = location.pathname === item.path;
+            return (
+              <div 
+                key={index} 
+                onClick={() => handleNavigate(item.path)} 
+                style={isActive ? activeItemStyle : itemStyle}
+                className="sidebar-item"
               >
-                <option value="">בחר יישוב...</option>
-                {settlements.map(s => (
-                  <option key={s.id} value={s.id}>{s.name}</option>
-                ))}
-              </select>
-            </div>
+                <span style={{ ...iconStyle, color: isActive ? '#63b3ed' : '#718096' }}>
+                  {item.icon}
+                </span>
+                <span style={{ 
+                  fontWeight: isActive ? '700' : '500',
+                  color: isActive ? 'white' : 'inherit'
+                }}>
+                  {item.label}
+                </span>
+              </div>
+            );
+          })}
+        </nav>
 
-            <div style={inputGroupStyle}>
-              <label style={labelStyle}>כתובת (רחוב ומספר)</label>
-              <input 
-                style={modalInputStyle}
-                value={formData.address}
-                onChange={(e) => setFormData({...formData, address: e.target.value})}
-                placeholder="לדוגמה: הכלנית 5"
-              />
-            </div>
-
-            <div style={{...inputGroupStyle, gridColumn: isMobile ? 'auto' : 'span 2'}}>
-              <label style={labelStyle}>מיקום מפורט (דירה/הערות הגעה)</label>
-              <input 
-                style={modalInputStyle}
-                value={formData.address_detail}
-                onChange={(e) => setFormData({...formData, address_detail: e.target.value})}
-                placeholder="כניסה ב', קומה 2..."
-              />
-            </div>
-
-            {/* נתונים טכניים */}
-            <div style={inputGroupStyle}>
-              <label style={labelStyle}>קריאה התחלתית (m³)</label>
-              <input 
-                type="number"
-                style={modalInputStyle}
-                value={formData.current_reading}
-                onChange={(e) => setFormData({...formData, current_reading: e.target.value})}
-              />
-            </div>
-
-            <div style={inputGroupStyle}>
-              <label style={labelStyle}>מספר נפשות</label>
-              <input 
-                type="number"
-                min="1"
-                style={modalInputStyle}
-                value={formData.residents_count}
-                onChange={(e) => setFormData({...formData, residents_count: e.target.value})}
-              />
-            </div>
-
-            <div style={inputGroupStyle}>
-              <label style={labelStyle}>סוג מונה</label>
-              <select 
-                style={modalInputStyle}
-                value={formData.type}
-                onChange={(e) => setFormData({...formData, type: e.target.value})}
-              >
-                <option value="משני">משני (דירתי)</option>
-                <option value="ראשי">ראשי (בנייני)</option>
-              </select>
-            </div>
-
-            <div style={inputGroupStyle}>
-              <label style={labelStyle}>סטטוס ראשוני</label>
-              <select 
-                style={modalInputStyle}
-                value={formData.status}
-                onChange={(e) => setFormData({...formData, status: e.target.value})}
-              >
-                <option value="פעיל">✅ פעיל</option>
-                <option value="מושבת">❌ מושבת</option>
-                <option value="תקול">⚠️ תקול</option>
-              </select>
-            </div>
+        {/* כפתורי תחתית */}
+        <div style={footerStyle}>
+          <div style={footerItemStyle} onClick={() => console.log('Logout')}>
+            <LogOut size={18} /> <span>התנתקות</span>
           </div>
-
-          <div style={{
-            ...footerStyle,
-            flexDirection: isMobile ? 'column-reverse' : 'row'
-          }}>
-            <button type="button" onClick={onClose} style={cancelBtnStyle}>ביטול</button>
-            <button type="submit" disabled={isSaving} style={saveBtnStyle}>
-              {isSaving ? "שומר נתונים..." : <><Check size={18} /> הוסף מונה</>}
-            </button>
+          <div style={{ ...footerItemStyle, color: '#f56565', fontSize: '12px', opacity: 0.7 }}>
+            <Trash2 size={16} /> <span>מחיקת חשבון</span>
           </div>
-        </form>
-      </div>
-    </div>
+        </div>
+      </aside>
+
+      <style>{`
+        .sidebar-item:hover {
+          background-color: rgba(255, 255, 255, 0.05);
+          color: white;
+        }
+      `}</style>
+    </>
   );
 };
 
 // --- Styles ---
-const modalOverlayStyle = { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, backdropFilter: 'blur(4px)' };
-const modalContentStyle = { backgroundColor: 'white', borderRadius: '20px', maxHeight: '95vh', overflowY: 'auto', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', direction: 'rtl' };
-const modalHeaderStyle = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px', borderBottom: '1px solid #f0f0f0', paddingBottom: '15px' };
-const closeIconBtnStyle = { border: 'none', background: 'none', cursor: 'pointer', color: '#a0aec0' };
-const errorBannerStyle = { backgroundColor: '#fff5f5', color: '#c53030', padding: '12px', borderRadius: '10px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', border: '1px solid #feb2b2' };
-const formGridStyle = { display: 'grid', gap: '15px' };
-const inputGroupStyle = { display: 'flex', flexDirection: 'column', gap: '4px' };
-const labelStyle = { fontSize: '12px', fontWeight: '700', color: '#4a5568', paddingRight: '2px' };
-const modalInputStyle = { padding: '10px 12px', borderRadius: '10px', border: '1px solid #e2e8f0', outline: 'none', fontSize: '14px', backgroundColor: '#f8fafc' };
-const footerStyle = { marginTop: '30px', display: 'flex', gap: '12px' };
-const saveBtnStyle = { flex: 2, backgroundColor: '#3182ce', color: 'white', border: 'none', padding: '14px', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' };
-const cancelBtnStyle = { flex: 1, backgroundColor: '#f7fafc', color: '#718096', border: '1px solid #e2e8f0', padding: '14px', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer' };
+const sidebarStyle = { 
+  height: '100vh', 
+  backgroundColor: '#1a1f2b', 
+  color: '#a0aec0', 
+  display: 'flex', 
+  flexDirection: 'column', 
+  padding: '24px 0', 
+  position: 'fixed', 
+  right: 0, 
+  top: 0, 
+  zIndex: 1000,
+  direction: 'rtl',
+  transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+  borderLeft: '1px solid #2d3748'
+};
 
-export default AddMeter;
+const hamburgerButtonStyle = {
+  position: 'fixed',
+  top: '15px',
+  right: '15px',
+  zIndex: 10001,
+  color: 'white',
+  border: 'none',
+  borderRadius: '12px',
+  padding: '10px',
+  display: 'flex',
+  alignItems: 'center',
+  boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+  cursor: 'pointer',
+  transition: 'all 0.2s'
+};
+
+const overlayStyle = {
+  position: 'fixed',
+  top: 0,
+  left: 0,
+  right: 0,
+  bottom: 0,
+  backgroundColor: 'rgba(0,0,0,0.7)',
+  backdropFilter: 'blur(3px)',
+  zIndex: 999
+};
+
+const logoSectionStyle = { 
+  display: 'flex', 
+  alignItems: 'center', 
+  padding: '0 24px 32px 24px', 
+  gap: '12px' 
+};
+
+const logoIconStyle = { 
+  width: '38px', 
+  height: '38px', 
+  backgroundColor: '#3182ce', 
+  borderRadius: '10px', 
+  display: 'flex', 
+  alignItems: 'center', 
+  justifyContent: 'center',
+  boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+};
+
+const logoTextContainer = { textAlign: 'right' };
+const mainTitleStyle = { color: 'white', fontWeight: '800', fontSize: '18px', letterSpacing: '-0.5px' };
+const subTitleStyle = { fontSize: '11px', color: '#718096', marginTop: '-2px' };
+
+const navStyle = { 
+  flex: 1, 
+  overflowY: 'auto', 
+  padding: '0 12px' 
+};
+
+const itemStyle = { 
+  display: 'flex', 
+  alignItems: 'center', 
+  gap: '12px', 
+  padding: '12px 16px', 
+  cursor: 'pointer', 
+  transition: 'all 0.2s', 
+  fontSize: '15px',
+  borderRadius: '10px',
+  marginBottom: '4px'
+};
+
+const activeItemStyle = { 
+  ...itemStyle, 
+  backgroundColor: 'rgba(49, 130, 206, 0.2)', 
+  color: '#63b3ed',
+  boxShadow: 'inset -4px 0 0 #3182ce'
+};
+
+const iconStyle = { display: 'flex', alignItems: 'center', transition: 'color 0.2s' };
+
+const footerStyle = { 
+  padding: '20px 24px', 
+  borderTop: '1px solid #2d3748', 
+  display: 'flex', 
+  flexDirection: 'column', 
+  gap: '16px' 
+};
+
+const footerItemStyle = { 
+  display: 'flex', 
+  alignItems: 'center', 
+  gap: '10px', 
+  fontSize: '14px', 
+  cursor: 'pointer',
+  transition: 'opacity 0.2s'
+};
+
+export default Sidebar;
