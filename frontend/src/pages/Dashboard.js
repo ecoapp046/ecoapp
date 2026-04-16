@@ -48,22 +48,6 @@ const Dashboard = () => {
         <p style={subtitleStyle}>מרכז בקרה ותפעול שטח</p>
       </header>
 
-      {/* חלק הפעולות המהירות - נשאר למעלה לגישה נוחה */}
-      <div style={cardStyle}>
-        <h3 style={cardTitleStyle}>פעולות מהירות</h3>
-        <div style={{
-          ...actionsGridStyle, 
-          flexDirection: isMobile ? 'column' : 'row'
-        }}>
-          <button onClick={() => navigate('/meters')} style={actionButtonStyle}>
-            <PlusCircle size={20} /> הוספת קריאה/מונה
-          </button>
-          <button onClick={() => navigate('/technician-report')} style={actionButtonStyle}>
-            <ClipboardList size={20} /> דיווח מהשטח
-          </button>
-        </div>
-      </div>
-
       <h3 style={{...cardTitleStyle, marginTop: '30px'}}>תקלות פתוחות</h3>
       
       {loading ? (
@@ -106,8 +90,26 @@ const SettlementCard = ({ name, count, onClick }) => (
     </div>
     <ChevronLeft size={20} color="#cbd5e0" />
   </div>
+
+
+
 );
 
+{/* חלק הפעולות המהירות - נשאר למעלה לגישה נוחה */}
+      <div style={cardStyle}>
+        <h3 style={cardTitleStyle}>פעולות מהירות</h3>
+        <div style={{
+          ...actionsGridStyle, 
+          flexDirection: isMobile ? 'column' : 'row'
+        }}>
+          <button onClick={() => navigate('/meters')} style={actionButtonStyle}>
+            <PlusCircle size={20} /> הוספת קריאה/מונה
+          </button>
+          <button onClick={() => navigate('/technician-report')} style={actionButtonStyle}>
+            <ClipboardList size={20} /> דיווח מהשטח
+          </button>
+        </div>
+      </div>
 // --- Styles ---
 const containerStyle = { direction: 'rtl', minHeight: '100vh', backgroundColor: '#f7fafc', boxSizing: 'border-box' };
 const headerStyle = { marginBottom: '25px' };
