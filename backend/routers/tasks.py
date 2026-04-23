@@ -1,77 +1,98 @@
 from fastapi import APIRouter, HTTPException
 from typing import List, Dict
 from database import db
-from models import Task  # ייבוא המודל מהקובץ שעדכנו
 from datetime import datetime
-from google.cloud import firestore
 
 router = APIRouter()
 
-# --- 1. קבלת כל המשימות (ממוינות לפי תאריך יצירה) ---
 @router.get("/get-tasks")
 async def get_tasks():
-    try:
-        # שליפת משימות ממוינות (דורש אינדקס ב-Firestore)
-        # אם עדיין אין אינדקס, אפשר להשתמש ב-stream() רגיל ולמיין ב-Python
-        docs = db.collection("tasks").stream()
-        tasks = []
-        for d in docs:
-            task_data = d.to_dict()
-            task_data["id"] = d.id
-            tasks.append(task_data)
-        
-        # מיון ב-Python (ליתר ביטחון אם אין אינדקס ב-DB)
-        tasks.sort(key=lambda x: x.get("created_at", ""), reverse=True)
-        return tasks
-    except Exception as e:
-        print(f"Error fetching tasks: {e}")
-        return []
+    docs = db.collection("tasks").stream()
+    tasks = [{**d.to_dict(), "id": d.id} for d in docs]
+    tasks.sort(key=lambda x: x.get("created_at", ""), reverse=True)
+    return tasks
 
-# --- 2. הוספת משימה חדשה ---
 @router.post("/add-task")
-async def add_task(task: Task):
+async def add_task(task_data: dict):
+    task_data["created_at"] = datetime.now().isoformat()
+    task_data["status"] = "פתוח"
+    # שדות ברירת מחדל למונה המקושר
+    task_data.setdefault("selected_meter_id", "")
+    task_data.setdefault("meter_reading_done", False)
+    task_data.setdefault("last_reading_value", "")
+    
+    new_doc_ref = db.collection("tasks").document()
+    new_doc_ref.set(task_data)
+    return {"status": "success", "id": new_doc_ref.id}
+
+@router.put("/update-single-meter-reading/{task_id}")
+async def update_single_meter_reading(task_id: str, data: dict):
     try:
-        task_dict = task.dict()
+        meter_id = data.get("meter_id")
+        new_val = str(data.get("reading", "0"))
+        now_str = datetime.now().strftime("%d/%m/%Y %H:%M")
+
+        task_ref = db.collection("tasks").document(task_id)
+        meter_ref = db.collection("meters").document(meter_id)
         
-        # הוספת נתונים אוטומטיים שהטכנאי לא ממלא ידנית
-        task_dict["created_at"] = datetime.now().isoformat()
-        task_dict["status"] = task_dict.get("status") or "פתוח"
+        meter_snap = meter_ref.get()
+        prev_val = meter_snap.to_dict().get("current_reading", "0") if meter_snap.exists else "0"
+
+        batch = db.batch()
         
-        # יצירת מסמך חדש
-        new_doc_ref = db.collection("tasks").document()
-        new_doc_ref.set(task_dict)
-        
-        return {"status": "success", "id": new_doc_ref.id}
+        # 1. עדכון המשימה - המשימה נשארת פתוחה (כפי שביקשת)
+        batch.update(task_ref, {
+            "last_reading_value": new_val,
+            "meter_reading_done": True,
+            "updated_at": datetime.now().isoformat()
+        })
+
+        # 2. עדכון המונה הראשי במערכת
+        batch.update(meter_ref, {
+            "current_reading": new_val, 
+            "last_reading": prev_val, 
+            "current_reading_date": now_str
+        })
+
+        # 3. רישום להיסטוריית קריאות
+        hist_ref = db.collection("readings").document()
+        batch.set(hist_ref, {
+            "meter_id": meter_id,
+            "value": new_val,
+            "previous_value": prev_val,
+            "date_display": now_str,
+            "timestamp": datetime.now(),
+            "log_type": "READING",
+            "note": f"עדכון מהשטח - משימה: {task_id}"
+        })
+
+        batch.commit()
+        return {"status": "success"}
     except Exception as e:
-        print(f"Error adding task: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-# --- 3. עדכון סטטוס משימה (למשל סגירת משימה) ---
-@router.put("/update-task-status/{task_id}")
-async def update_task_status(task_id: str, data: dict):
+@router.put("/complete-task/{task_id}")
+async def complete_task(task_id: str, data: dict):
     try:
-        new_status = data.get("status")
-        if not new_status:
-            raise HTTPException(status_code=400, detail="Missing status")
-
-        db.collection("tasks").document(task_id).update({
-            "status": new_status,
-            "updated_at": datetime.now().isoformat()
+        task_ref = db.collection("tasks").document(task_id)
+        task_ref.update({
+            "status": "הושלם",
+            "completed_at": datetime.now().isoformat(),
+            "notes": data.get("notes", ""),
+            "images": data.get("images", [])
         })
         return {"status": "success"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# --- 4. מחיקת משימה ---
+@router.put("/update-task/{task_id}")
+async def update_task(task_id: str, data: dict):
+    task_ref = db.collection("tasks").document(task_id)
+    data["updated_at"] = datetime.now().isoformat()
+    task_ref.update(data)
+    return {"status": "success"}
+
 @router.delete("/delete-task/{task_id}")
 async def delete_task(task_id: str):
-    try:
-        doc_ref = db.collection("tasks").document(task_id)
-        if not doc_ref.get().exists:
-            raise HTTPException(status_code=404, detail="Task not found")
-            
-        doc_ref.delete()
-        return {"status": "success"}
-    except Exception as e:
-        print(f"Error deleting task: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    db.collection("tasks").document(task_id).delete()
+    return {"status": "success"}

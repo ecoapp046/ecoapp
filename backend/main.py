@@ -15,7 +15,7 @@ app.add_middleware(
 # חיבור הראוטרים - כאן היה חסר ה-tasks
 app.include_router(readings.router, tags=["Readings"])
 app.include_router(meters.router, tags=["Meters"])
-app.include_router(tasks.router, tags=["Tasks"]) # <--- הוסף את השורה הזו!
+app.include_router(tasks.router, tags=["Tasks"]) # 
 
 @app.get("/")
 def home():
