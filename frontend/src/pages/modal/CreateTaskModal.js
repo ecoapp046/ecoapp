@@ -1,211 +1,279 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../api/api';
-import { Upload, X } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Check, Search, Info, Activity } from 'lucide-react';
 import { useIsMobile } from '../../hooks/useIsMobile';
 
-const CreateTaskModal = ({ isOpen, onClose, onTaskCreated }) => {
+const CreateTaskModal = ({ isOpen, onClose, onTaskCreated, taskToEdit = null }) => {
   const isMobile = useIsMobile();
+  const isEdit = !!taskToEdit;
+  
+  const [step, setStep] = useState(1);
   const [settlements, setSettlements] = useState([]);
+  const [allMeters, setAllMeters] = useState([]);
+  const [filteredMeters, setFilteredMeters] = useState([]);
+  const [meterSearch, setMeterSearch] = useState('');
   const [loading, setLoading] = useState(false);
+  
   const [newTask, setNewTask] = useState({
-    title: '', type: 'נזילה', priority: 'בינונית', status: 'פתוח',
-    assigned_to: '', description: '', location: '', address: '',
-    neighborhood: '', water_line: '', depth: '', notes: ''
+    title: '', 
+    type: 'נזילה', 
+    custom_type: '', 
+    priority: 'בינונית', 
+    status: 'פתוח',
+    assigned_to: '', 
+    description: '', 
+    location: '', 
+    address: '',
+    selected_meter_id: '' 
   });
 
   useEffect(() => {
     if (isOpen) {
-      const fetchSettlements = async () => {
-        try {
-          const res = await api.get('/get-settlements');
-          setSettlements(res.data);
-        } catch (e) {
-          console.error("Error fetching settlements", e);
-        }
-      };
-      fetchSettlements();
+      fetchInitialData();
+      if (taskToEdit) {
+        setNewTask(taskToEdit);
+        setStep(1);
+      } else {
+        resetForm();
+      }
     }
-  }, [isOpen]);
+  }, [isOpen, taskToEdit]);
 
-  if (!isOpen) return null;
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
+  const fetchInitialData = async () => {
     try {
-      await api.post('/add-task', newTask);
+      const [settlementsRes, metersRes] = await Promise.all([
+        api.get('/get-settlements'),
+        api.get('/get-meters')
+      ]);
+      setSettlements(settlementsRes.data);
+      setAllMeters(metersRes.data);
+    } catch (e) { console.error("שגיאה בטעינת נתונים", e); }
+  };
+
+  const resetForm = () => {
+    setStep(1);
+    setNewTask({
+      title: '', type: 'נזילה', custom_type: '', priority: 'בינונית', status: 'פתוח',
+      assigned_to: '', description: '', location: '', address: '',
+      selected_meter_id: ''
+    });
+  };
+
+  useEffect(() => {
+    let filtered = allMeters.filter(m => m.settlement_name === newTask.location);
+    if (meterSearch) {
+      filtered = filtered.filter(m => m.id.toString().includes(meterSearch) || m.customer_name?.includes(meterSearch));
+    }
+    setFilteredMeters(filtered);
+  }, [newTask.location, meterSearch, allMeters]);
+
+  const handleMeterSelect = (meterId) => {
+    setNewTask(prev => ({
+      ...prev,
+      selected_meter_id: prev.selected_meter_id === meterId ? '' : meterId
+    }));
+  };
+
+  const handleSubmit = async () => {
+    setLoading(true);
+    const taskData = {
+      ...newTask,
+      type: newTask.type === 'אחר' ? newTask.custom_type : newTask.type
+    };
+
+    try {
+      if (isEdit) {
+        await api.put(`/update-task/${taskToEdit.id}`, taskData);
+      } else {
+        await api.post('/add-task', taskData);
+      }
       onTaskCreated();
       onClose();
-      // איפוס טופס לאחר הצלחה
-      setNewTask({
-        title: '', type: 'נזילה', priority: 'בינונית', status: 'פתוח',
-        assigned_to: '', description: '', location: '', address: '',
-        neighborhood: '', water_line: '', depth: '', notes: ''
-      });
     } catch (e) {
-      alert("שגיאה ביצירת המשימה");
+      alert("שגיאה בשמירת המשימה");
     } finally {
       setLoading(false);
     }
   };
 
-  // לוגיקה לסידור הגריד במובייל
-  const dynamicGridRow = {
-    ...gridRow,
-    gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr'
-  };
+  if (!isOpen) return null;
 
   return (
     <div style={modalOverlayStyle}>
-      <div style={{...modalContentStyle, padding: isMobile ? '20px' : '32px'}}>
-        <div style={{...modalHeaderStyle, display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
-          <h2 style={titleStyle}>דיווח תקלה חדשה</h2>
-          <X cursor="pointer" onClick={onClose} size={20} color="#718096" />
+      <div style={{...modalContentStyle, padding: isMobile ? '20px' : '30px'}}>
+        
+        <div style={modalHeaderStyle}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+            <h2 style={titleStyle}>{isEdit ? "עריכת משימה" : "משימה חדשה"} - {step}/3</h2>
+            <X cursor="pointer" onClick={onClose} size={20} color="#718096" />
+          </div>
+          <div style={progressBarBg}><div style={{...progressBarFill, width: `${(step/3)*100}%`}}></div></div>
         </div>
 
-        <form onSubmit={handleSubmit} style={formStyle}>
-          <div style={fieldGroup}>
-            <label style={labelStyle}>כותרת *</label>
-            <input 
-              style={inputStyle} 
-              placeholder="לדוגמה: נזילה ברחוב הירקון"
-              required 
-              value={newTask.title}
-              onChange={e => setNewTask({...newTask, title: e.target.value})}
-            />
-          </div>
-
-          <div style={dynamicGridRow}>
+        {step === 1 && (
+          <div style={stepContainer}>
             <div style={fieldGroup}>
-              <label style={labelStyle}>סוג תקלה</label>
-              <select style={inputStyle} value={newTask.type} onChange={e => setNewTask({...newTask, type: e.target.value})}>
-                <option value="נזילה">נזילה</option>
-                <option value="פיצוץ">פיצוץ</option>
-                <option value="התקנה">התקנה</option>
-                <option value="אחר">אחר</option>
-              </select>
-            </div>
-            <div style={fieldGroup}>
-              <label style={labelStyle}>עדיפות</label>
-              <select style={inputStyle} value={newTask.priority} onChange={e => setNewTask({...newTask, priority: e.target.value})}>
-                <option value="נמוכה">נמוכה</option>
-                <option value="בינונית">בינונית</option>
-                <option value="דחוף">דחוף</option>
-                <option value="קריטית">קריטית</option>
-              </select>
-            </div>
-          </div>
-
-          <div style={dynamicGridRow}>
-            <div style={fieldGroup}>
-              <label style={labelStyle}>סטטוס</label>
-              <select style={inputStyle} value={newTask.status} onChange={e => setNewTask({...newTask, status: e.target.value})}>
-                <option value="פתוח">פתוח</option>
-                <option value="בטיפול">בטיפול</option>
-              </select>
-            </div>
-            <div style={fieldGroup}>
-              <label style={labelStyle}>מוקצה ל</label>
-              <select style={inputStyle} value={newTask.assigned_to} onChange={e => setNewTask({...newTask, assigned_to: e.target.value})}>
-                <option value="">בחר עובד</option>
-                <option value="Tech_01">טכנאי שטח 1</option>
-                <option value="Tech_02">טכנאי שטח 2</option>
-              </select>
-            </div>
-          </div>
-
-          <div style={fieldGroup}>
-            <label style={labelStyle}>תיאור</label>
-            <textarea 
-              style={{...inputStyle, height: '60px', resize: 'none'}} 
-              placeholder="פרט על התקלה..."
-              value={newTask.description}
-              onChange={e => setNewTask({...newTask, description: e.target.value})} 
-            />
-          </div>
-
-          <div style={sectionDivider}>
-            <span style={sectionTitle}>מיקום</span>
-            <div style={lineStyle}></div>
-          </div>
-
-          <div style={dynamicGridRow}>
-            <div style={fieldGroup}>
-              <label style={labelStyle}>יישוב *</label>
+              <label style={labelStyle}>בחר ישוב *</label>
               <select 
                 style={inputStyle} 
-                required
                 value={newTask.location}
                 onChange={e => setNewTask({...newTask, location: e.target.value})}
               >
-                <option value="">בחר יישוב</option>
+                <option value="">בחר מרשימה...</option>
                 {settlements.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
               </select>
             </div>
             <div style={fieldGroup}>
-              <label style={labelStyle}>כתובת</label>
+              <label style={labelStyle}>כותרת המשימה</label>
               <input 
                 style={inputStyle} 
-                value={newTask.address}
-                onChange={e => setNewTask({...newTask, address: e.target.value})} 
+                placeholder="לדוגמה: בדיקת מונה תקול"
+                value={newTask.title}
+                onChange={e => setNewTask({...newTask, title: e.target.value})}
               />
             </div>
           </div>
+        )}
 
-          <div style={dynamicGridRow}>
+        {step === 2 && (
+          <div style={stepContainer}>
             <div style={fieldGroup}>
-              <label style={labelStyle}>שכונה</label>
-              <input style={inputStyle} value={newTask.neighborhood} onChange={e => setNewTask({...newTask, neighborhood: e.target.value})} />
+              <label style={labelStyle}>סוג משימה</label>
+              <select style={inputStyle} value={newTask.type} onChange={e => setNewTask({...newTask, type: e.target.value})}>
+                <option value="נזילה">נזילה</option>
+                <option value="פיצוץ">פיצוץ</option>
+                <option value="התקנה">התקנה</option>
+                <option value="קריאת מונים">קריאת מונה (פרטני)</option>
+                <option value="אחר">אחר...</option>
+              </select>
             </div>
-            <div style={fieldGroup}>
-              <label style={labelStyle}>קו מים</label>
-              <input style={inputStyle} value={newTask.water_line} onChange={e => setNewTask({...newTask, water_line: e.target.value})} />
-            </div>
-          </div>
 
-          <div style={dynamicGridRow}>
-             <div style={fieldGroup}>
-                <label style={labelStyle}>עומק קו (מטר)</label>
-                <input type="number" step="0.1" style={inputStyle} value={newTask.depth} onChange={e => setNewTask({...newTask, depth: e.target.value})} />
-             </div>
-             <div style={fieldGroup}>
-                <label style={labelStyle}>תמונות/סרטונים</label>
-                <div style={uploadBoxStyle}>
-                  <Upload size={16} color="#A0AEC0" />
-                  <span style={{ color: '#A0AEC0', fontSize: '12px' }}>{isMobile ? 'צרף קובץ' : 'לחץ להוספת קבצים'}</span>
-                  <input type="file" multiple style={{ position: 'absolute', opacity: 0, cursor: 'pointer', width: '100%', height: '100%' }} />
+            {newTask.type === 'אחר' && (
+              <div style={fieldGroup}>
+                <label style={labelStyle}>פרט איזה סוג משימה:</label>
+                <input 
+                  style={inputStyle} 
+                  placeholder="הקלד סוג משימה..."
+                  value={newTask.custom_type}
+                  onChange={e => setNewTask({...newTask, custom_type: e.target.value})}
+                />
+              </div>
+            )}
+
+            <div style={meterSelectorArea}>
+                <div style={searchHeader}>
+                    <Search size={16} color="#A0AEC0" />
+                    <input 
+                        style={miniSearchInput} 
+                        placeholder={newTask.type === 'קריאת מונים' ? "בחר מונה לקריאה..." : "קשר מונה רלוונטי (אופציונלי)..."} 
+                        value={meterSearch}
+                        onChange={e => setMeterSearch(e.target.value)}
+                    />
                 </div>
-             </div>
+                <div style={meterListScroll}>
+                  {filteredMeters.length === 0 ? <p style={{textAlign:'center', padding:'20px', fontSize:'12px', color:'#A0AEC0'}}>בחר ישוב תחילה או שנה חיפוש</p> : 
+                    filteredMeters.map(m => (
+                      <div 
+                        key={m.id} 
+                        onClick={() => handleMeterSelect(m.id)}
+                        style={meterItemStyle(newTask.selected_meter_id === m.id)}
+                      >
+                        <div>
+                            <div style={{fontSize: '13px', fontWeight:'bold'}}>{m.id}</div>
+                            <div style={{fontSize: '11px'}}>{m.customer_name}</div>
+                        </div>
+                        {newTask.selected_meter_id === m.id && <Check size={16} color="#3182ce" />}
+                      </div>
+                    ))
+                  }
+                </div>
+                {newTask.selected_meter_id && (
+                    <div style={selectedInfo}>
+                        <Activity size={12} /> מונה {newTask.selected_meter_id} קושר למשימה
+                    </div>
+                )}
+            </div>
           </div>
+        )}
 
-          <div style={{...modalActions, flexDirection: isMobile ? 'column-reverse' : 'row'}}>
-            <button type="button" onClick={onClose} style={{...cancelBtn, width: isMobile ? '100%' : 'auto'}}>ביטול</button>
-            <button type="submit" disabled={loading} style={{...saveBtn, width: isMobile ? '100%' : 'auto'}}>
-              {loading ? "מעבד..." : "דיווח תקלה"}
-            </button>
+        {step === 3 && (
+          <div style={stepContainer}>
+            <div style={fieldGroup}>
+              <label style={labelStyle}>תיאור ופרטים נוספים</label>
+              <textarea 
+                style={{...inputStyle, height: '80px'}} 
+                placeholder="הערות לטכנאי השטח..."
+                value={newTask.description}
+                onChange={e => setNewTask({...newTask, description: e.target.value})} 
+              />
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div style={fieldGroup}>
+                    <label style={labelStyle}>דחיפות</label>
+                    <select style={inputStyle} value={newTask.priority} onChange={e => setNewTask({...newTask, priority: e.target.value})}>
+                        <option value="נמוכה">נמוכה</option>
+                        <option value="בינונית">בינונית</option>
+                        <option value="גבוהה">גבוהה</option>
+                        <option value="דחוף מאוד">🚨 דחוף מאוד</option>
+                    </select>
+                </div>
+                <div style={fieldGroup}>
+                    <label style={labelStyle}>טכנאי אחראי</label>
+                    <select style={inputStyle} value={newTask.assigned_to} onChange={e => setNewTask({...newTask, assigned_to: e.target.value})}>
+                        <option value="">ללא הקצאה</option>
+                        <option value="טכנאי 1">טכנאי 1</option>
+                        <option value="טכנאי 2">טכנאי 2</option>
+                    </select>
+                </div>
+            </div>
           </div>
-        </form>
+        )}
+
+        <div style={modalActions}>
+          {step > 1 && (
+            <button onClick={() => setStep(step - 1)} style={navBtn}>
+              <ChevronRight size={18} /> הקודם
+            </button>
+          )}
+          <div style={{ flex: 1 }}></div>
+          {step < 3 ? (
+            <button 
+              disabled={step === 1 && (!newTask.location || !newTask.title)}
+              onClick={() => setStep(step + 1)} 
+              style={{...navBtn, backgroundColor: '#3182ce', color: 'white', border: 'none'}}
+            >
+              המשך <ChevronLeft size={18} />
+            </button>
+          ) : (
+            <button onClick={handleSubmit} disabled={loading} style={saveBtn}>
+              {loading ? "שומר..." : "פתח משימה לביצוע"}
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
 };
 
-// --- CSS Objects ---
-const modalOverlayStyle = { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.4)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, padding: '10px', overflowY: 'auto', direction: 'rtl' };
-const modalContentStyle = { backgroundColor: 'white', borderRadius: '16px', width: '100%', maxWidth: '650px', boxShadow: '0 10px 25px rgba(0,0,0,0.1)', maxHeight: '95vh', overflowY: 'auto' };
+// --- Styles ---
+const modalOverlayStyle = { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1200, direction: 'rtl' };
+const modalContentStyle = { backgroundColor: 'white', borderRadius: '20px', width: '95%', maxWidth: '450px', maxHeight: '90vh', overflowY: 'auto' };
 const modalHeaderStyle = { marginBottom: '20px' };
-const titleStyle = { margin: 0, fontSize: '20px', fontWeight: '700', color: '#1A202C' };
-const formStyle = { display: 'flex', flexDirection: 'column', gap: '16px' };
-const gridRow = { display: 'grid', gap: '16px' };
-const fieldGroup = { display: 'flex', flexDirection: 'column', gap: '6px' };
-const labelStyle = { fontSize: '13px', fontWeight: '600', color: '#4A5568' };
-const inputStyle = { padding: '10px 12px', borderRadius: '10px', border: '1px solid #E2E8F0', fontSize: '14px', outline: 'none', backgroundColor: '#F8FAFC' };
-const sectionDivider = { display: 'flex', alignItems: 'center', gap: '10px', marginTop: '5px' };
-const sectionTitle = { fontSize: '13px', fontWeight: 'bold', color: '#718096', whiteSpace: 'nowrap' };
-const lineStyle = { flex: 1, height: '1px', backgroundColor: '#EDF2F7' };
-const uploadBoxStyle = { border: '2px dashed #E2E8F0', borderRadius: '10px', padding: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', position: 'relative', cursor: 'pointer', backgroundColor: '#F8FAFC' };
-const modalActions = { display: 'flex', justifyContent: 'flex-start', gap: '12px', marginTop: '15px' };
-const saveBtn = { padding: '12px 30px', borderRadius: '10px', border: 'none', cursor: 'pointer', backgroundColor: '#0083C2', color: 'white', fontWeight: 'bold', transition: 'opacity 0.2s' };
-const cancelBtn = { padding: '12px 30px', borderRadius: '10px', border: '1px solid #E2E8F0', cursor: 'pointer', backgroundColor: 'white', color: '#4A5568' };
+const titleStyle = { margin: 0, fontSize: '18px', fontWeight: 'bold' };
+const progressBarBg = { height: '4px', backgroundColor: '#EDF2F7', borderRadius: '2px' };
+const progressBarFill = { height: '100%', backgroundColor: '#3182ce', transition: 'width 0.3s' };
+const stepContainer = { display: 'flex', flexDirection: 'column', gap: '15px', minHeight: '280px' };
+const fieldGroup = { display: 'flex', flexDirection: 'column', gap: '5px' };
+const labelStyle = { fontSize: '13px', fontWeight: 'bold', color: '#4A5568' };
+const inputStyle = { padding: '10px', borderRadius: '8px', border: '1px solid #E2E8F0', fontSize: '14px', outline: 'none' };
+const meterSelectorArea = { border: '1px solid #E2E8F0', borderRadius: '10px', marginTop: '10px' };
+const searchHeader = { display: 'flex', alignItems: 'center', padding: '10px', borderBottom: '1px solid #E2E8F0', gap: '8px' };
+const miniSearchInput = { border: 'none', outline: 'none', fontSize: '13px', width: '100%' };
+const meterListScroll = { height: '140px', overflowY: 'auto' };
+const selectedInfo = { padding: '8px', backgroundColor: '#EBF8FF', color: '#2B6CB0', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '5px', borderRadius: '0 0 10px 10px' };
+const meterItemStyle = (isSelected) => ({ padding: '10px 15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', borderBottom: '1px solid #F7FAFC', backgroundColor: isSelected ? '#F0F9FF' : 'transparent' });
+const modalActions = { display: 'flex', gap: '10px', marginTop: '20px', paddingTop: '15px', borderTop: '1px solid #F7FAFC' };
+const navBtn = { display: 'flex', alignItems: 'center', gap: '5px', padding: '8px 15px', borderRadius: '8px', border: '1px solid #E2E8F0', backgroundColor: 'white', cursor: 'pointer', fontSize: '14px' };
+const saveBtn = { padding: '8px 20px', borderRadius: '8px', border: 'none', backgroundColor: '#38A169', color: 'white', fontWeight: 'bold', cursor: 'pointer' };
 
 export default CreateTaskModal;

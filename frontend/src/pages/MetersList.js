@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import api from '../api/api'; // הייבוא המרכזי שלך
+import api from '../api/api';
 import { useNavigate } from 'react-router-dom';
-import { Search, Plus, ChevronDown, RefreshCw } from 'lucide-react';
+import { Search, Plus, ChevronDown, ChevronUp, RefreshCw } from 'lucide-react'; // הוספתי ChevronUp
 import AddMeter from './components/AddMeter'; 
 import { useIsMobile } from '../hooks/useIsMobile';
 
@@ -17,16 +17,24 @@ function MetersList() {
   const [selectedSettlement, setSelectedSettlement] = useState('כל היישובים');
   const [selectedStatus, setSelectedStatus] = useState('הכל');
 
+  // --- State חדש לניהול ה-Dropdowns ---
+  const [expandedSettlements, setExpandedSettlements] = useState({});
+
   const fetchData = async () => {
     setLoading(true);
     try {
-      // שימוש ב-api.get במקום axios.get
       const [metersRes, settlementsRes] = await Promise.all([
         api.get('/get-meters'),
         api.get('/get-settlements')
       ]);
       setMeters(metersRes.data);
       setSettlements(settlementsRes.data);
+      
+      // אופציונלי: פתיחת כל היישובים כברירת מחדל בטעינה ראשונה
+      const initialExpanded = {};
+      settlementsRes.data.forEach(s => initialExpanded[s.name] = true);
+      setExpandedSettlements(initialExpanded);
+      
     } catch (error) {
       console.error("שגיאה בטעינה:", error);
     }
@@ -34,6 +42,14 @@ function MetersList() {
   };
 
   useEffect(() => { fetchData(); }, []);
+
+  // פונקציה לשינוי מצב הפתיחה/סגירה
+  const toggleSettlement = (cityName) => {
+    setExpandedSettlements(prev => ({
+      ...prev,
+      [cityName]: !prev[cityName]
+    }));
+  };
 
   const filteredMeters = meters.filter(m => {
     const matchesSearch = 
@@ -124,51 +140,58 @@ function MetersList() {
         </div>
       </div>
 
-      {/* רשימת המונים מקובצת */}
+      {/* רשימת המונים מקובצת עם יכולת צמצום */}
       {Object.keys(groupedMeters).length > 0 ? (
         Object.keys(groupedMeters).map((city) => (
           <div key={city} style={groupCardStyle}>
-            <div style={groupHeaderStyle}>
+            {/* כותרת קבוצה - לחיצה עליה מצמצמת/פותחת */}
+            <div 
+                style={{...groupHeaderStyle, cursor: 'pointer'}} 
+                onClick={() => toggleSettlement(city)}
+            >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <div style={blueDotStyle}></div>
                   <span style={{ color: '#3182ce', fontWeight: 'bold', fontSize: '16px' }}>{city}</span>
                   <span style={{ color: '#999', fontSize: '13px' }}>({groupedMeters[city].length})</span>
                 </div>
-                <ChevronDown size={18} color="#999" />
+                {expandedSettlements[city] ? <ChevronUp size={18} color="#999" /> : <ChevronDown size={18} color="#999" />}
             </div>
 
-            <div style={{ overflowX: 'auto', width: '100%' }}>
-                <table style={{...tableStyle, minWidth: isMobile ? '600px' : '100%'}}>
-                  <thead>
-                    <tr style={thRowStyle}>
-                      <th style={thPadding}>מספר מונה</th>
-                      <th style={thPadding}>סוג</th>
-                      <th style={thPadding}>תושב</th>
-                      <th style={thPadding}>כתובת</th>
-                      <th style={thPadding}>קריאה</th>
-                      <th style={thPadding}>סטטוס</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {groupedMeters[city].map((m) => (
-                      <tr key={m.id} style={trStyle}>
-                        <td style={tdPadding}>
-                          <span onClick={() => navigate(`/meter/${m.id}`)} style={meterLinkStyle}>
-                            {m.id}
-                          </span>
-                        </td>
-                        <td style={tdPadding}>{m.type || 'משני'}</td>
-                        <td style={tdPadding}>{m.customer_name || '—'}</td>
-                        <td style={tdPadding}>{m.address || '—'}</td>
-                        <td style={tdPadding}>{m.current_reading} קו"ב</td>
-                        <td style={tdPadding}>
-                          <span style={statusBadgeStyle(m.status)}>{m.status || 'פעיל'}</span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-            </div>
+            {/* תוכן הטבלה - מוצג רק אם היישוב פתוח ב-State */}
+            {expandedSettlements[city] && (
+                <div style={{ overflowX: 'auto', width: '100%', animation: 'fadeIn 0.2s ease-out' }}>
+                    <table style={{...tableStyle, minWidth: isMobile ? '600px' : '100%'}}>
+                      <thead>
+                        <tr style={thRowStyle}>
+                          <th style={thPadding}>מספר מונה</th>
+                          <th style={thPadding}>סוג</th>
+                          <th style={thPadding}>תושב</th>
+                          <th style={thPadding}>כתובת</th>
+                          <th style={thPadding}>קריאה</th>
+                          <th style={thPadding}>סטטוס</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {groupedMeters[city].map((m) => (
+                          <tr key={m.id} style={trStyle}>
+                            <td style={tdPadding}>
+                              <span onClick={() => navigate(`/meter/${m.id}`)} style={meterLinkStyle}>
+                                {m.id}
+                              </span>
+                            </td>
+                            <td style={tdPadding}>{m.type || 'משני'}</td>
+                            <td style={tdPadding}>{m.customer_name || '—'}</td>
+                            <td style={tdPadding}>{m.address || '—'}</td>
+                            <td style={tdPadding}>{m.current_reading} קו"ב</td>
+                            <td style={tdPadding}>
+                              <span style={statusBadgeStyle(m.status)}>{m.status || 'פעיל'}</span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                </div>
+            )}
           </div>
         ))
       ) : (
@@ -194,12 +217,13 @@ function MetersList() {
       <style>{`
         .spin { animation: spin 1s linear infinite; }
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
       `}</style>
     </div>
   );
 }
 
-// --- Styles (נשארים ללא שינוי פונקציונלי) ---
+// --- Styles (ללא שינוי) ---
 const containerStyle = { direction: 'rtl', backgroundColor: '#f4f7fa', minHeight: '100vh', boxSizing: 'border-box' };
 const headerStyle = { display: 'flex', justifyContent: 'space-between', marginBottom: '30px' };
 const addBtnStyle = { backgroundColor: '#3182ce', color: 'white', border: 'none', padding: '12px 24px', borderRadius: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 'bold' };

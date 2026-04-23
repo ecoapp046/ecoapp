@@ -32,7 +32,7 @@ const AddMeter = ({ isOpen, onClose, settlements, onMeterAdded }) => {
 
     setIsSaving(true);
     try {
-      // שימוש ב-API המרכזי
+      // שליחת הנתונים לשרת
       await api.post('/add-meter', {
         ...formData,
         meter_id: cleanId,
@@ -40,7 +40,7 @@ const AddMeter = ({ isOpen, onClose, settlements, onMeterAdded }) => {
         residents_count: parseInt(formData.residents_count) || 1
       });
 
-      onMeterAdded(); 
+      onMeterAdded(); // רענון הרשימה באבא
       resetForm();
       onClose();      
     } catch (err) {
@@ -72,7 +72,7 @@ const AddMeter = ({ isOpen, onClose, settlements, onMeterAdded }) => {
       }}>
         <div style={modalHeaderStyle}>
           <button onClick={onClose} style={closeIconBtnStyle}><X size={20} /></button>
-          <h2 style={{ margin: 0, fontSize: isMobile ? '18px' : '20px' }}>הוספת מונה חדש</h2>
+          <h2 style={{ margin: 0, fontSize: isMobile ? '18px' : '22px' }}>הוספת מונה חדש</h2>
         </div>
 
         {error && (
@@ -143,7 +143,7 @@ const AddMeter = ({ isOpen, onClose, settlements, onMeterAdded }) => {
                 onChange={(e) => setFormData({...formData, settlement_id: e.target.value})}
               >
                 <option value="">בחר יישוב...</option>
-                {settlements.map(s => (
+                {settlements && settlements.map(s => (
                   <option key={s.id} value={s.id}>{s.name}</option>
                 ))}
               </select>
@@ -174,6 +174,7 @@ const AddMeter = ({ isOpen, onClose, settlements, onMeterAdded }) => {
               <label style={labelStyle}>קריאה התחלתית (m³)</label>
               <input 
                 type="number"
+                step="any"
                 style={modalInputStyle}
                 value={formData.current_reading}
                 onChange={(e) => setFormData({...formData, current_reading: e.target.value})}
@@ -232,18 +233,57 @@ const AddMeter = ({ isOpen, onClose, settlements, onMeterAdded }) => {
   );
 };
 
-// --- Styles ---
-const modalOverlayStyle = { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, backdropFilter: 'blur(4px)' };
-const modalContentStyle = { backgroundColor: 'white', borderRadius: '20px', maxHeight: '95vh', overflowY: 'auto', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', direction: 'rtl' };
-const modalHeaderStyle = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px', borderBottom: '1px solid #f0f0f0', paddingBottom: '15px' };
-const closeIconBtnStyle = { border: 'none', background: 'none', cursor: 'pointer', color: '#a0aec0' };
-const errorBannerStyle = { backgroundColor: '#fff5f5', color: '#c53030', padding: '12px', borderRadius: '10px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', border: '1px solid #feb2b2' };
+// --- אובייקטי עיצוב (Styles) ---
+const modalOverlayStyle = { 
+  position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, 
+  backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', 
+  alignItems: 'center', justifyContent: 'center', zIndex: 1000, 
+  backdropFilter: 'blur(4px)' 
+};
+
+const modalContentStyle = { 
+  backgroundColor: 'white', borderRadius: '24px', maxHeight: '95vh', 
+  overflowY: 'auto', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', 
+  direction: 'rtl', boxSizing: 'border-box' 
+};
+
+const modalHeaderStyle = { 
+  display: 'flex', justifyContent: 'space-between', alignItems: 'center', 
+  marginBottom: '25px', borderBottom: '1px solid #f0f0f0', paddingBottom: '15px' 
+};
+
+const closeIconBtnStyle = { border: 'none', background: 'none', cursor: 'pointer', color: '#a0aec0', padding: '5px' };
+
+const errorBannerStyle = { 
+  backgroundColor: '#fff5f5', color: '#c53030', padding: '12px', 
+  borderRadius: '12px', marginBottom: '20px', display: 'flex', 
+  alignItems: 'center', gap: '10px', fontSize: '13px', border: '1px solid #feb2b2' 
+};
+
 const formGridStyle = { display: 'grid', gap: '15px' };
-const inputGroupStyle = { display: 'flex', flexDirection: 'column', gap: '4px' };
+
+const inputGroupStyle = { display: 'flex', flexDirection: 'column', gap: '6px' };
+
 const labelStyle = { fontSize: '12px', fontWeight: '700', color: '#4a5568', paddingRight: '2px' };
-const modalInputStyle = { padding: '10px 12px', borderRadius: '10px', border: '1px solid #e2e8f0', outline: 'none', fontSize: '14px', backgroundColor: '#f8fafc' };
+
+const modalInputStyle = { 
+  padding: '12px', borderRadius: '12px', border: '1px solid #e2e8f0', 
+  outline: 'none', fontSize: '14px', backgroundColor: '#f8fafc',
+  transition: 'border-color 0.2s'
+};
+
 const footerStyle = { marginTop: '30px', display: 'flex', gap: '12px' };
-const saveBtnStyle = { flex: 2, backgroundColor: '#3182ce', color: 'white', border: 'none', padding: '14px', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' };
-const cancelBtnStyle = { flex: 1, backgroundColor: '#f7fafc', color: '#718096', border: '1px solid #e2e8f0', padding: '14px', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer' };
+
+const saveBtnStyle = { 
+  flex: 2, backgroundColor: '#3182ce', color: 'white', border: 'none', 
+  padding: '14px', borderRadius: '14px', fontWeight: 'bold', cursor: 'pointer', 
+  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+  boxShadow: '0 4px 6px rgba(49, 130, 206, 0.2)'
+};
+
+const cancelBtnStyle = { 
+  flex: 1, backgroundColor: '#f7fafc', color: '#718096', border: '1px solid #e2e8f0', 
+  padding: '14px', borderRadius: '14px', fontWeight: 'bold', cursor: 'pointer' 
+};
 
 export default AddMeter;

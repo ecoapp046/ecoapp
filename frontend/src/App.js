@@ -1,11 +1,17 @@
 import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import Sidebar from './pages/components/Sidebar';  // capital S ✓
+
+// ייבוא דפים (Pages)
+import Sidebar from './pages/components/Sidebar';
+import Dashboard from './pages/Dashboard';
 import MetersList from './pages/MetersList';
-import TechnicianHome from './pages/TechnicianHome';
 import MeterDetails from './pages/MeterDetails';
-import Dashboard from './pages/Dashboard'; 
 import TasksList from './pages/TasksList';
+import SettlementTasks from './pages/SettlementTasks';
+import TaskDetails from './pages/TaskDetails'; 
+import TechnicianHome from './pages/TechnicianHome';
+
+// Hooks
 import { useIsMobile } from './hooks/useIsMobile';
 
 // רכיב עזר שגורם לדף לקפוץ למעלה בכל מעבר נתיב
@@ -32,35 +38,43 @@ function App() {
         overflowX: 'hidden',
         fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif'
       }}>
-        {/* הסיידבר מנהל את המצבים שלו פנימית */}
+        
+        {/* תפריט צד */}
         <Sidebar />
 
+        {/* תוכן מרכזי */}
         <main style={{ 
           flex: 1, 
-          // מרווח ימני רק בדסקטופ עבור הסיידבר הקבוע
           marginRight: isMobile ? '0' : '240px', 
           padding: isMobile ? '15px' : '30px',
           minHeight: '100vh',
           width: '100%',
           boxSizing: 'border-box',
-          // מרווח עליון במובייל כדי שהמבורגר לא יסתיר כותרות
           marginTop: isMobile ? '60px' : '0',
           transition: 'margin 0.3s ease'
         }}>
-          {/* קונטיינר מרכזי עם רוחב מקסימלי לנראות מקצועית בדסקטופ רחב */}
           <div style={{ 
             maxWidth: '1400px', 
             margin: '0 auto',
             width: '100%' 
           }}>
             <Routes>
+              {/* דף הבית / דאשבורד ניהולי */}
               <Route path="/" element={<Dashboard />} />
+              
+              {/* ניהול מונים */}
               <Route path="/meters" element={<MetersList />} />
               <Route path="/meter/:id" element={<MeterDetails />} />
-              <Route path="/technician-report" element={<TechnicianHome />} />
-              <Route path="/tasks" element={<TasksList />} />
               
-              {/* נתיבי ברירת מחדל או דפי 404 */}
+              {/* מערך משימות טכנאי */}
+              <Route path="/tasks" element={<TasksList />} /> {/* בחירת יישוב */}
+              <Route path="/tasks/:settlementName" element={<SettlementTasks />} /> {/* רשימת משימות ביישוב */}
+              <Route path="/task/:taskId" element={<TaskDetails />} /> {/* דיווח מפורט על משימה בודדת */}
+              
+              {/* דיווח טכנאי כללי (אם עדיין בשימוש) */}
+              <Route path="/technician-report" element={<TechnicianHome />} />
+              
+              {/* ניתוב ברירת מחדל במקרה של דף לא נמצא */}
               <Route path="*" element={<Navigate to="/" />} />
             </Routes>
           </div>

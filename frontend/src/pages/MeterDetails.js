@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import api from '../api/api'; // ✅ נשאר - קובץ זה נמצא ב-pages/
+import api from '../api/api'; 
 import { 
   ArrowRight, Edit2, RefreshCw, Trash2, Calendar, User, 
   MapPin, Droplets, Clock, History, Plus, Phone, Mail, Users, Info 
@@ -8,12 +8,13 @@ import {
 
 import AddReadingModal from './modal/AddReadingModal';
 import EditMeterModal from './modal/EditMeterModal';
-import { useIsMobile } from '../hooks/useIsMobile'; // ✅ נשאר - קובץ זה נמצא ב-pages/
+import { useIsMobile } from '../hooks/useIsMobile';
 
 function MeterDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
+  
   const [meter, setMeter] = useState(null);
   const [history, setHistory] = useState([]); 
   const [loading, setLoading] = useState(true);
@@ -21,6 +22,7 @@ function MeterDetails() {
   const [isReadingModalOpen, setIsReadingModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
+  // פונקציה לטעינת הנתונים מהשרת
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
@@ -66,21 +68,29 @@ function MeterDetails() {
   };
 
   const handleDelete = async () => {
-    if (window.confirm("מחיקת מונה היא פעולה סופית. להמשיך?")) {
+    if (window.confirm("מחיקת מונה היא פעולה סופית. האם להמשיך?")) {
       try {
         await api.delete(`/delete-meter/${id}`);
         navigate('/meters');
-      } catch (e) { alert("שגיאה במחיקה"); }
+      } catch (e) { 
+        alert("שגיאה במחיקה"); 
+      }
     }
   };
 
-  if (loading) return <div style={centerStyle}><RefreshCw className="spin" /> טוען נתונים...</div>;
+  if (loading) return (
+    <div style={centerStyle}>
+      <RefreshCw className="spin" size={32} color="#3182ce" />
+      <span style={{ marginTop: '10px', fontWeight: 'bold' }}>טוען נתונים...</span>
+    </div>
+  );
+
   if (!meter) return null;
 
   return (
     <div style={{...containerStyle, padding: isMobile ? '12px' : '30px'}}>
       
-      {/* תפריט עליון */}
+      {/* תפריט עליון ופעולות */}
       <div style={{
         ...topNavStyle, 
         flexDirection: isMobile ? 'column' : 'row', 
@@ -116,9 +126,16 @@ function MeterDetails() {
         {/* כרטיס פרטים אישיים */}
         <div style={cardStyle}>
           <div style={cardHeader}>
-            <h2 style={{margin:0, fontSize: isMobile ? '18px' : '22px'}}>כרטיס מונה: {id}</h2>
+            <div>
+              <h2 style={{margin:0, fontSize: isMobile ? '18px' : '22px'}}>כרטיס מונה: {id}</h2>
+              <div style={{display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px', color: '#718096', fontSize: '13px'}}>
+                <MapPin size={14} color="#e53e3e" />
+                <span style={{fontWeight: '500'}}>{meter.settlement_name || 'יישוב לא הוגדר'}</span>
+              </div>
+            </div>
             <span style={statusBadge(meter.status)}>{meter.status}</span>
           </div>
+          
           <div style={{
             ...detailsGrid, 
             gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr'
@@ -134,7 +151,7 @@ function MeterDetails() {
           </div>
         </div>
 
-        {/* כרטיס נתוני צריכה - ✅ תוקן: api.Droplets → Droplets */}
+        {/* כרטיס נתוני צריכה */}
         <div style={cardStyle}>
           <div style={cardHeader}>
             <h2 style={{margin:0, fontSize: isMobile ? '18px' : '22px'}}>נתוני צריכה</h2>
@@ -208,21 +225,35 @@ function MeterDetails() {
         </div>
       </div>
 
-      <AddReadingModal isOpen={isReadingModalOpen} onClose={() => setIsReadingModalOpen(false)} meterId={id} onSuccess={fetchData} />
-      <EditMeterModal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} meterData={{...meter, id}} onSuccess={fetchData} />
+      {/* מודלים של עריכה והוספה */}
+      <AddReadingModal 
+        isOpen={isReadingModalOpen} 
+        onClose={() => setIsReadingModalOpen(false)} 
+        meterId={id} 
+        onSuccess={fetchData} 
+      />
+      <EditMeterModal 
+        isOpen={isEditModalOpen} 
+        onClose={() => setIsEditModalOpen(false)} 
+        meterData={{...meter, id}} 
+        onSuccess={fetchData} 
+      />
       
+      {/* אנימציית סיבוב ועיצוב טבלה */}
       <style>{`
         .spin { animation: spin 1s linear infinite; } 
         @keyframes spin { to { transform: rotate(360deg); } }
-        tbody tr:hover { background-color: #f7fafc; }
+        tbody tr:hover { background-color: #f7fafc; transition: background 0.2s; }
       `}</style>
     </div>
   );
 }
 
-// --- Components עזר ---
+// --- קומפוננטות עזר פנימיות ---
+
 const InfoItem = ({icon, label, value}) => (
-  <div style={infoItemStyle}>{icon}
+  <div style={infoItemStyle}>
+    {icon}
     <div style={{overflow: 'hidden'}}>
       <div style={infoLabel}>{label}</div>
       <div style={{...infoValue, textOverflow: 'ellipsis', whiteSpace: 'nowrap'}} title={value}>{value || '—'}</div>
@@ -261,7 +292,8 @@ const StatBox = ({label, value, unit, sub, highlight, isMobile}) => (
   </div>
 );
 
-// --- Styles ---
+// --- אובייקטי עיצוב (Styles) ---
+
 const containerStyle = { direction: 'rtl', backgroundColor: '#f0f2f5', minHeight: '100vh', boxSizing: 'border-box', maxWidth: '100%', overflowX: 'hidden' };
 const topNavStyle = { display: 'flex', justifyContent: 'space-between', marginBottom: '25px' };
 const actionButtonsGroup = { display: 'flex', gap: '8px' };
@@ -281,7 +313,7 @@ const statBoxStyle = { borderRadius: '12px', textAlign: 'center' };
 const tableStyle = { width: '100%', borderCollapse: 'collapse', textAlign: 'right' };
 const thStyle = { color: '#a0aec0', fontSize: '12px', padding: '12px', borderBottom: '2px solid #f0f0f0' };
 const trStyle = { borderBottom: '1px solid #f0f0f0' };
-const centerStyle = { display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' };
+const centerStyle = { display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100vh' };
 const statusBadge = (s) => ({ padding: '6px 12px', borderRadius: '20px', fontSize: '11px', fontWeight: 'bold', backgroundColor: s === 'פעיל' ? '#c6f6d5' : '#fed7d7', color: s === 'פעיל' ? '#22543d' : '#822727' });
 
 export default MeterDetails;
