@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../api/api';
-import { X, ChevronLeft, ChevronRight, Check, Search, Info, Activity } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Check, Search, Activity } from 'lucide-react';
 import { useIsMobile } from '../../hooks/useIsMobile';
 
 const CreateTaskModal = ({ isOpen, onClose, onTaskCreated, taskToEdit = null }) => {
@@ -15,7 +15,6 @@ const CreateTaskModal = ({ isOpen, onClose, onTaskCreated, taskToEdit = null }) 
   const [loading, setLoading] = useState(false);
   
   const [newTask, setNewTask] = useState({
-    title: '', 
     type: 'נזילה', 
     custom_type: '', 
     priority: 'בינונית', 
@@ -53,7 +52,7 @@ const CreateTaskModal = ({ isOpen, onClose, onTaskCreated, taskToEdit = null }) 
   const resetForm = () => {
     setStep(1);
     setNewTask({
-      title: '', type: 'נזילה', custom_type: '', priority: 'בינונית', status: 'פתוח',
+      type: 'נזילה', custom_type: '', priority: 'בינונית', status: 'פתוח',
       assigned_to: '', description: '', location: '', address: '',
       selected_meter_id: ''
     });
@@ -76,9 +75,14 @@ const CreateTaskModal = ({ isOpen, onClose, onTaskCreated, taskToEdit = null }) 
 
   const handleSubmit = async () => {
     setLoading(true);
+    
+    // קביעת הכותרת לפי סוג המשימה
+    const taskType = newTask.type === 'אחר' ? newTask.custom_type : newTask.type;
+    
     const taskData = {
       ...newTask,
-      type: newTask.type === 'אחר' ? newTask.custom_type : newTask.type
+      title: taskType, // הכותרת תהיה סוג המשימה
+      type: taskType
     };
 
     try {
@@ -110,6 +114,7 @@ const CreateTaskModal = ({ isOpen, onClose, onTaskCreated, taskToEdit = null }) 
           <div style={progressBarBg}><div style={{...progressBarFill, width: `${(step/3)*100}%`}}></div></div>
         </div>
 
+        {/* שלב 1: מיקום וסוג */}
         {step === 1 && (
           <div style={stepContainer}>
             <div style={fieldGroup}>
@@ -123,22 +128,9 @@ const CreateTaskModal = ({ isOpen, onClose, onTaskCreated, taskToEdit = null }) 
                 {settlements.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
               </select>
             </div>
-            <div style={fieldGroup}>
-              <label style={labelStyle}>כותרת המשימה</label>
-              <input 
-                style={inputStyle} 
-                placeholder="לדוגמה: בדיקת מונה תקול"
-                value={newTask.title}
-                onChange={e => setNewTask({...newTask, title: e.target.value})}
-              />
-            </div>
-          </div>
-        )}
 
-        {step === 2 && (
-          <div style={stepContainer}>
             <div style={fieldGroup}>
-              <label style={labelStyle}>סוג משימה</label>
+              <label style={labelStyle}>סוג משימה *</label>
               <select style={inputStyle} value={newTask.type} onChange={e => setNewTask({...newTask, type: e.target.value})}>
                 <option value="נזילה">נזילה</option>
                 <option value="פיצוץ">פיצוץ</option>
@@ -159,13 +151,18 @@ const CreateTaskModal = ({ isOpen, onClose, onTaskCreated, taskToEdit = null }) 
                 />
               </div>
             )}
+          </div>
+        )}
 
+        {/* שלב 2: שיוך מונה */}
+        {step === 2 && (
+          <div style={stepContainer}>
             <div style={meterSelectorArea}>
                 <div style={searchHeader}>
                     <Search size={16} color="#A0AEC0" />
                     <input 
                         style={miniSearchInput} 
-                        placeholder={newTask.type === 'קריאת מונים' ? "בחר מונה לקריאה..." : "קשר מונה רלוונטי (אופציונלי)..."} 
+                        placeholder={newTask.type === 'קריאת מונים' ? "חובה לבחור מונה לקריאה..." : "קשר מונה רלוונטי (אופציונלי)..."} 
                         value={meterSearch}
                         onChange={e => setMeterSearch(e.target.value)}
                     />
@@ -193,16 +190,20 @@ const CreateTaskModal = ({ isOpen, onClose, onTaskCreated, taskToEdit = null }) 
                     </div>
                 )}
             </div>
+            <p style={{fontSize: '12px', color: '#718096', marginTop: '5px'}}>
+               * במידה ומדובר בנזילה כללית בישוב, אין חובה לבחור מונה.
+            </p>
           </div>
         )}
 
+        {/* שלב 3: פרטים טכניים */}
         {step === 3 && (
           <div style={stepContainer}>
             <div style={fieldGroup}>
               <label style={labelStyle}>תיאור ופרטים נוספים</label>
               <textarea 
                 style={{...inputStyle, height: '80px'}} 
-                placeholder="הערות לטכנאי השטח..."
+                placeholder="הערות לטכנאי השטח (מיקום מדויק, הנחיות מיוחדות)..."
                 value={newTask.description}
                 onChange={e => setNewTask({...newTask, description: e.target.value})} 
               />
@@ -238,7 +239,7 @@ const CreateTaskModal = ({ isOpen, onClose, onTaskCreated, taskToEdit = null }) 
           <div style={{ flex: 1 }}></div>
           {step < 3 ? (
             <button 
-              disabled={step === 1 && (!newTask.location || !newTask.title)}
+              disabled={step === 1 && (!newTask.location || (newTask.type === 'אחר' && !newTask.custom_type))}
               onClick={() => setStep(step + 1)} 
               style={{...navBtn, backgroundColor: '#3182ce', color: 'white', border: 'none'}}
             >
@@ -255,7 +256,7 @@ const CreateTaskModal = ({ isOpen, onClose, onTaskCreated, taskToEdit = null }) 
   );
 };
 
-// --- Styles ---
+// --- Styles (ללא שינוי) ---
 const modalOverlayStyle = { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1200, direction: 'rtl' };
 const modalContentStyle = { backgroundColor: 'white', borderRadius: '20px', width: '95%', maxWidth: '450px', maxHeight: '90vh', overflowY: 'auto' };
 const modalHeaderStyle = { marginBottom: '20px' };
