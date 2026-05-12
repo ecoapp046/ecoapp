@@ -15,14 +15,12 @@ async def process_reading(m_id: str, new_value: float, technician: str):
     old_value = data.get("current_reading", "0")
     now_str = datetime.now().strftime("%d/%m/%Y %H:%M")
 
-    # עדכון המונה
     meter_ref.update({
         "last_reading": str(old_value),
         "current_reading": str(new_value),
         "current_reading_date": now_str
     })
 
-    # רישום היסטוריה
     db.collection("readings").document().set({
         "meter_id": m_id,
         "value": str(new_value),
@@ -61,7 +59,6 @@ async def get_meter_history(m_id: str):
                 "note": d.get("note", "")
             }
 
-            # הוספת המידע המיוחד של ההחלפה אם קיים
             if l_type == "REPLACEMENT":
                 item["old_meter_id"] = d.get("old_meter_id", "—")
                 item["final_reading_old"] = d.get("final_reading_old", "0")

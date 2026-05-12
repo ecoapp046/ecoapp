@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../api/api';
-import { X, ChevronLeft, ChevronRight, Check, Search, Activity, AlertCircle } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Check, Search, Activity } from 'lucide-react';
 import { useIsMobile } from '../../hooks/useIsMobile';
 
-const CreateTaskModal = ({ isOpen, onClose, onTaskCreated, taskToEdit = null }) => {
+const EditTaskModal = ({ isOpen, onClose, taskToEdit, onTaskUpdated }) => {
   const isMobile = useIsMobile();
-  const isEdit = !!taskToEdit;
   
   const [step, setStep] = useState(1);
   const [settlements, setSettlements] = useState([]);
@@ -14,7 +13,7 @@ const CreateTaskModal = ({ isOpen, onClose, onTaskCreated, taskToEdit = null }) 
   const [meterSearch, setMeterSearch] = useState('');
   const [loading, setLoading] = useState(false);
   
-  const [newTask, setNewTask] = useState({
+  const [formData, setFormData] = useState({
     type: 'נזילה', 
     custom_type: '', 
     priority: 'בינונית', 
@@ -25,18 +24,22 @@ const CreateTaskModal = ({ isOpen, onClose, onTaskCreated, taskToEdit = null }) 
     selected_meter_id: '' 
   });
 
-  // Check if meter selection is mandatory for this specific type
-  const isMeterRequired = newTask.type === 'קריאת מונה';
-
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && taskToEdit) {
       fetchInitialData();
-      if (taskToEdit) {
-        setNewTask(taskToEdit);
-        setStep(1);
-      } else {
-        resetForm();
-      }
+      const knownTypes = ["נזילה", "בדיקת תקינות מונה", "קריאת מונה", "שיוך מונה לצרכן", "התקנת מונה"];
+      const isCustom = !knownTypes.includes(taskToEdit.type);
+      
+      setFormData({
+        ...taskToEdit,
+        type: isCustom ? 'אחר' : (taskToEdit.type || 'נזילה'),
+        custom_type: isCustom ? taskToEdit.type : '',
+        priority: taskToEdit.priority || 'בינונית',
+        location: taskToEdit.location || '',
+        description: taskToEdit.description || '',
+        selected_meter_id: taskToEdit.selected_meter_id || ''
+      });
+      setStep(1);
     }
   }, [isOpen, taskToEdit]);
 
@@ -51,25 +54,19 @@ const CreateTaskModal = ({ isOpen, onClose, onTaskCreated, taskToEdit = null }) 
     } catch (e) { console.error("שגיאה בטעינת נתונים", e); }
   };
 
-  const resetForm = () => {
-    setStep(1);
-    setNewTask({
-      type: 'נזילה', custom_type: '', priority: 'בינונית', status: 'פתוח',
-      description: '', location: '', address: '',
-      selected_meter_id: ''
-    });
-  };
-
   useEffect(() => {
-    let filtered = allMeters.filter(m => m.settlement_name === newTask.location);
+    let filtered = allMeters.filter(m => m.settlement_name === formData.location);
     if (meterSearch) {
-      filtered = filtered.filter(m => m.id.toString().includes(meterSearch) || m.customer_name?.includes(meterSearch));
+      filtered = filtered.filter(m => 
+        m.id.toString().includes(meterSearch) || 
+        m.customer_name?.includes(meterSearch)
+      );
     }
     setFilteredMeters(filtered);
-  }, [newTask.location, meterSearch, allMeters]);
+  }, [formData.location, meterSearch, allMeters]);
 
   const handleMeterSelect = (meterId) => {
-    setNewTask(prev => ({
+    setFormData(prev => ({
       ...prev,
       selected_meter_id: prev.selected_meter_id === meterId ? '' : meterId
     }));
@@ -77,34 +74,24 @@ const CreateTaskModal = ({ isOpen, onClose, onTaskCreated, taskToEdit = null }) 
 
   const handleSubmit = async () => {
     setLoading(true);
-    const taskType = newTask.type === 'אחר' ? newTask.custom_type : newTask.type;
-    const taskData = { ...newTask, title: taskType, type: taskType };
+    const taskType = formData.type === 'אחר' ? formData.custom_type : formData.type;
+    
+    const updatedData = {
+      ...formData,
+      title: taskType,
+      type: taskType
+    };
 
     try {
-      if (isEdit) {
-        await api.put(`/update-task/${taskToEdit.id}`, taskData);
-      } else {
-        await api.post('/add-task', taskData);
-      }
-      onTaskCreated();
+      await api.put(`/update-task/${taskToEdit.id}`, updatedData);
+      alert("המשימה עודכנה בהצלחה");
+      onTaskUpdated();
       onClose();
     } catch (e) {
-      alert("שגיאה בשמירת המשימה");
+      alert("שגיאה בעדכון המשימה");
     } finally {
       setLoading(false);
     }
-  };
-
-  // Helper to determine if the "Next" button should be disabled
-  const isNextDisabled = () => {
-    if (step === 1) {
-      return !newTask.location || (newTask.type === 'אחר' && !newTask.custom_type);
-    }
-    if (step === 2) {
-      // If type is Meter Reading, user MUST select a meter to proceed
-      return isMeterRequired && !newTask.selected_meter_id;
-    }
-    return false;
   };
 
   if (!isOpen) return null;
@@ -115,7 +102,7 @@ const CreateTaskModal = ({ isOpen, onClose, onTaskCreated, taskToEdit = null }) 
         
         <div style={modalHeaderStyle}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-            <h2 style={titleStyle}>{isEdit ? "עריכת משימה" : "משימה חדשה"} - {step}/3</h2>
+            <h2 style={titleStyle}>עריכת משימה - {step}/3</h2>
             <X cursor="pointer" onClick={onClose} size={20} color="#718096" />
           </div>
           <div style={progressBarBg}><div style={{...progressBarFill, width: `${(step/3)*100}%`}}></div></div>
@@ -124,11 +111,11 @@ const CreateTaskModal = ({ isOpen, onClose, onTaskCreated, taskToEdit = null }) 
         {step === 1 && (
           <div style={stepContainer}>
             <div style={fieldGroup}>
-              <label style={labelStyle}>בחר ישוב *</label>
+              <label style={labelStyle}>יישוב *</label>
               <select 
                 style={inputStyle} 
-                value={newTask.location}
-                onChange={e => setNewTask({...newTask, location: e.target.value})}
+                value={formData.location}
+                onChange={e => setFormData({...formData, location: e.target.value})}
               >
                 <option value="">בחר מרשימה...</option>
                 {settlements.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
@@ -137,24 +124,24 @@ const CreateTaskModal = ({ isOpen, onClose, onTaskCreated, taskToEdit = null }) 
 
             <div style={fieldGroup}>
               <label style={labelStyle}>סוג משימה *</label>
-              <select style={inputStyle} value={newTask.type} onChange={e => setNewTask({...newTask, type: e.target.value, selected_meter_id: ''})}>
+              <select style={inputStyle} value={formData.type} onChange={e => setFormData({...formData, type: e.target.value})}>
                 <option value="נזילה">נזילה</option>
                 <option value="בדיקת תקינות מונה">בדיקת תקינות מונה</option>
-                <option value="קריאת מונה">קריאת מונה (חובה לבחור מונה)</option>
+                <option value="קריאת מונה">קריאת מונה</option>
                 <option value="שיוך מונה לצרכן">שיוך מונה לצרכן</option>
                 <option value="התקנת מונה">התקנת מונה</option>
                 <option value="אחר">אחר...</option>
               </select>
             </div>
 
-            {newTask.type === 'אחר' && (
+            {formData.type === 'אחר' && (
               <div style={fieldGroup}>
                 <label style={labelStyle}>פרט איזה סוג משימה:</label>
                 <input 
                   style={inputStyle} 
                   placeholder="הקלד סוג משימה..."
-                  value={newTask.custom_type}
-                  onChange={e => setNewTask({...newTask, custom_type: e.target.value})}
+                  value={formData.custom_type}
+                  onChange={e => setFormData({...formData, custom_type: e.target.value})}
                 />
               </div>
             )}
@@ -163,10 +150,6 @@ const CreateTaskModal = ({ isOpen, onClose, onTaskCreated, taskToEdit = null }) 
 
         {step === 2 && (
           <div style={stepContainer}>
-            <div style={{display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '5px'}}>
-               <label style={labelStyle}>בחירת מונה {isMeterRequired ? '*' : '(אופציונלי)'}</label>
-               {isMeterRequired && <span style={{color: '#E53E3E', fontSize: '11px'}}>(חובה לסוג משימה זה)</span>}
-            </div>
             <div style={meterSelectorArea}>
                 <div style={searchHeader}>
                     <Search size={16} color="#A0AEC0" />
@@ -178,33 +161,28 @@ const CreateTaskModal = ({ isOpen, onClose, onTaskCreated, taskToEdit = null }) 
                     />
                 </div>
                 <div style={meterListScroll}>
-                  {filteredMeters.length === 0 ? <p style={{textAlign:'center', padding:'20px', fontSize:'12px', color:'#A0AEC0'}}>בחר ישוב תחילה או שנה חיפוש</p> : 
+                  {filteredMeters.length === 0 ? <p style={{textAlign:'center', padding:'20px', fontSize:'12px', color:'#A0AEC0'}}>אין מונים ביישוב זה</p> : 
                     filteredMeters.map(m => (
                       <div 
                         key={m.id} 
                         onClick={() => handleMeterSelect(m.id)}
-                        style={meterItemStyle(newTask.selected_meter_id === m.id)}
+                        style={meterItemStyle(formData.selected_meter_id === m.id)}
                       >
                         <div>
                             <div style={{fontSize: '13px', fontWeight:'bold'}}>{m.id}</div>
                             <div style={{fontSize: '11px'}}>{m.customer_name}</div>
                         </div>
-                        {newTask.selected_meter_id === m.id && <Check size={16} color="#3182ce" />}
+                        {formData.selected_meter_id === m.id && <Check size={16} color="#3182ce" />}
                       </div>
                     ))
                   }
                 </div>
-                {newTask.selected_meter_id && (
+                {formData.selected_meter_id && (
                     <div style={selectedInfo}>
-                        <Activity size={12} /> מונה {newTask.selected_meter_id} קושר למשימה
+                        <Activity size={12} /> מונה {formData.selected_meter_id} נבחר
                     </div>
                 )}
             </div>
-            {isMeterRequired && !newTask.selected_meter_id && (
-                <div style={{display: 'flex', alignItems: 'center', gap: '5px', color: '#E53E3E', marginTop: '10px', fontSize: '12px'}}>
-                    <AlertCircle size={14} /> יש לבחור מונה כדי להמשיך
-                </div>
-            )}
           </div>
         )}
 
@@ -214,14 +192,14 @@ const CreateTaskModal = ({ isOpen, onClose, onTaskCreated, taskToEdit = null }) 
               <label style={labelStyle}>תיאור ופרטים נוספים</label>
               <textarea 
                 style={{...inputStyle, height: '120px'}} 
-                placeholder="הערות לטכנאי השטח (מיקום מדויק, הנחיות מיוחדות)..."
-                value={newTask.description}
-                onChange={e => setNewTask({...newTask, description: e.target.value})} 
+                placeholder="הערות..."
+                value={formData.description}
+                onChange={e => setFormData({...formData, description: e.target.value})} 
               />
             </div>
             <div style={fieldGroup}>
                 <label style={labelStyle}>דחיפות</label>
-                <select style={inputStyle} value={newTask.priority} onChange={e => setNewTask({...newTask, priority: e.target.value})}>
+                <select style={inputStyle} value={formData.priority} onChange={e => setFormData({...formData, priority: e.target.value})}>
                     <option value="נמוכה">נמוכה</option>
                     <option value="בינונית">בינונית</option>
                     <option value="גבוהה">גבוהה</option>
@@ -240,21 +218,15 @@ const CreateTaskModal = ({ isOpen, onClose, onTaskCreated, taskToEdit = null }) 
           <div style={{ flex: 1 }}></div>
           {step < 3 ? (
             <button 
-              disabled={isNextDisabled()}
+              disabled={step === 1 && (!formData.location || (formData.type === 'אחר' && !formData.custom_type))}
               onClick={() => setStep(step + 1)} 
-              style={{
-                ...navBtn, 
-                backgroundColor: isNextDisabled() ? '#E2E8F0' : '#3182ce', 
-                color: isNextDisabled() ? '#A0AEC0' : 'white', 
-                border: 'none',
-                cursor: isNextDisabled() ? 'not-allowed' : 'pointer'
-              }}
+              style={{...navBtn, backgroundColor: '#3182ce', color: 'white', border: 'none'}}
             >
               המשך <ChevronLeft size={18} />
             </button>
           ) : (
             <button onClick={handleSubmit} disabled={loading} style={saveBtn}>
-              {loading ? "שומר..." : "פתח משימה לביצוע"}
+              {loading ? "מעדכן..." : "שמור שינויים"}
             </button>
           )}
         </div>
@@ -263,8 +235,7 @@ const CreateTaskModal = ({ isOpen, onClose, onTaskCreated, taskToEdit = null }) 
   );
 };
 
-// ... (styles remain the same)
-const modalOverlayStyle = { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1200, direction: 'rtl' };
+const modalOverlayStyle = { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 2000, direction: 'rtl' };
 const modalContentStyle = { backgroundColor: 'white', borderRadius: '20px', width: '95%', maxWidth: '450px', maxHeight: '90vh', overflowY: 'auto' };
 const modalHeaderStyle = { marginBottom: '20px' };
 const titleStyle = { margin: 0, fontSize: '18px', fontWeight: 'bold' };
@@ -284,4 +255,4 @@ const modalActions = { display: 'flex', gap: '10px', marginTop: '20px', paddingT
 const navBtn = { display: 'flex', alignItems: 'center', gap: '5px', padding: '8px 15px', borderRadius: '8px', border: '1px solid #E2E8F0', backgroundColor: 'white', cursor: 'pointer', fontSize: '14px' };
 const saveBtn = { padding: '8px 20px', borderRadius: '8px', border: 'none', backgroundColor: '#38A169', color: 'white', fontWeight: 'bold', cursor: 'pointer' };
 
-export default CreateTaskModal;
+export default EditTaskModal;

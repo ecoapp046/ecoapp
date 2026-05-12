@@ -2,8 +2,9 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../api/api'; 
 import { 
-  ArrowRight, Edit2, RefreshCw, Trash2, Calendar, User, 
-  MapPin, Droplets, Clock, History, Plus, Phone, Mail, Users, Info 
+  ArrowRight, Edit2, RefreshCw, Trash2, User, 
+  MapPin, Droplets, Clock, History, Plus, Phone, Mail, Users, Info, 
+  Navigation, Home, Building2 
 } from 'lucide-react';
 
 import AddReadingModal from './modal/AddReadingModal';
@@ -22,7 +23,6 @@ function MeterDetails() {
   const [isReadingModalOpen, setIsReadingModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
-  // פונקציה לטעינת הנתונים מהשרת
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
@@ -90,7 +90,6 @@ function MeterDetails() {
   return (
     <div style={{...containerStyle, padding: isMobile ? '12px' : '30px'}}>
       
-      {/* תפריט עליון ופעולות */}
       <div style={{
         ...topNavStyle, 
         flexDirection: isMobile ? 'column' : 'row', 
@@ -123,7 +122,6 @@ function MeterDetails() {
         gridTemplateColumns: isMobile ? '1fr' : '1.2fr 1fr'
       }}>
         
-        {/* כרטיס פרטים אישיים */}
         <div style={cardStyle}>
           <div style={cardHeader}>
             <div>
@@ -144,14 +142,21 @@ function MeterDetails() {
             <PhoneItem label="טלפון" value={meter.phone} />
             <InfoItem icon={<Mail color="#805ad5" size={18}/>} label="אימייל" value={meter.email} />
             <InfoItem icon={<Users color="#dd6b20" size={18}/>} label="נפשות" value={meter.residents_count} />
-            <InfoItem icon={<MapPin color="#3182ce" size={18}/>} label="יישוב" value={meter.settlement_name} />
+            <InfoItem 
+                icon={<Navigation color="#38a169" size={18}/>} 
+                label="סדר הליכה" 
+                value={meter.walking_order || '1'} 
+            />
+            <InfoItem 
+                icon={meter.type === 'ראשי' ? <Building2 color="#3182ce" size={18}/> : <Home color="#3182ce" size={18}/>} 
+                label="סוג מונה" 
+                value={meter.type || 'משני'} 
+            />
             <InfoItem icon={<MapPin color="#e53e3e" size={18}/>} label="כתובת" value={meter.address} />
             <InfoItem icon={<Info color="#718096" size={18}/>} label="מיקום מפורט" value={meter.address_detail} />
-            <InfoItem icon={<Calendar color="#3182ce" size={18}/>} label="סוג מונה" value={meter.type || 'משני'} />
           </div>
         </div>
 
-        {/* כרטיס נתוני צריכה */}
         <div style={cardStyle}>
           <div style={cardHeader}>
             <h2 style={{margin:0, fontSize: isMobile ? '18px' : '22px'}}>נתוני צריכה</h2>
@@ -168,7 +173,6 @@ function MeterDetails() {
         </div>
       </div>
 
-      {/* היסטוריית קריאות */}
       <div style={{...cardStyle, marginTop: '25px', padding: isMobile ? '15px' : '24px'}}>
         <div style={{
           ...historyHeaderStyle, 
@@ -225,7 +229,6 @@ function MeterDetails() {
         </div>
       </div>
 
-      {/* מודלים של עריכה והוספה */}
       <AddReadingModal 
         isOpen={isReadingModalOpen} 
         onClose={() => setIsReadingModalOpen(false)} 
@@ -239,7 +242,6 @@ function MeterDetails() {
         onSuccess={fetchData} 
       />
       
-      {/* אנימציית סיבוב ועיצוב טבלה */}
       <style>{`
         .spin { animation: spin 1s linear infinite; } 
         @keyframes spin { to { transform: rotate(360deg); } }
@@ -248,8 +250,6 @@ function MeterDetails() {
     </div>
   );
 }
-
-// --- קומפוננטות עזר פנימיות ---
 
 const InfoItem = ({icon, label, value}) => (
   <div style={infoItemStyle}>
@@ -291,8 +291,6 @@ const StatBox = ({label, value, unit, sub, highlight, isMobile}) => (
     </div>}
   </div>
 );
-
-// --- אובייקטי עיצוב (Styles) ---
 
 const containerStyle = { direction: 'rtl', backgroundColor: '#f0f2f5', minHeight: '100vh', boxSizing: 'border-box', maxWidth: '100%', overflowX: 'hidden' };
 const topNavStyle = { display: 'flex', justifyContent: 'space-between', marginBottom: '25px' };

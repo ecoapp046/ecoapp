@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import api from '../api/api';
 import { useNavigate } from 'react-router-dom';
 import { Search, Plus, ChevronDown, ChevronUp, RefreshCw } from 'lucide-react'; // הוספתי ChevronUp
-import AddMeter from './components/AddMeter'; 
+import AddMeter from './modal/AddMeter'; 
 import { useIsMobile } from '../hooks/useIsMobile';
 
 function MetersList() {
@@ -17,7 +17,6 @@ function MetersList() {
   const [selectedSettlement, setSelectedSettlement] = useState('כל היישובים');
   const [selectedStatus, setSelectedStatus] = useState('הכל');
 
-  // --- State חדש לניהול ה-Dropdowns ---
   const [expandedSettlements, setExpandedSettlements] = useState({});
 
   const fetchData = async () => {
@@ -30,7 +29,6 @@ function MetersList() {
       setMeters(metersRes.data);
       setSettlements(settlementsRes.data);
       
-      // אופציונלי: פתיחת כל היישובים כברירת מחדל בטעינה ראשונה
       const initialExpanded = {};
       settlementsRes.data.forEach(s => initialExpanded[s.name] = true);
       setExpandedSettlements(initialExpanded);
@@ -43,7 +41,6 @@ function MetersList() {
 
   useEffect(() => { fetchData(); }, []);
 
-  // פונקציה לשינוי מצב הפתיחה/סגירה
   const toggleSettlement = (cityName) => {
     setExpandedSettlements(prev => ({
       ...prev,
@@ -96,7 +93,6 @@ function MetersList() {
         </button>
       </div>
 
-      {/* שורת פילטרים וחיפוש */}
       <div style={dynamicFilterRow}>
         <div style={searchWrapperStyle}>
           <input 
@@ -140,11 +136,9 @@ function MetersList() {
         </div>
       </div>
 
-      {/* רשימת המונים מקובצת עם יכולת צמצום */}
       {Object.keys(groupedMeters).length > 0 ? (
         Object.keys(groupedMeters).map((city) => (
           <div key={city} style={groupCardStyle}>
-            {/* כותרת קבוצה - לחיצה עליה מצמצמת/פותחת */}
             <div 
                 style={{...groupHeaderStyle, cursor: 'pointer'}} 
                 onClick={() => toggleSettlement(city)}
@@ -157,7 +151,6 @@ function MetersList() {
                 {expandedSettlements[city] ? <ChevronUp size={18} color="#999" /> : <ChevronDown size={18} color="#999" />}
             </div>
 
-            {/* תוכן הטבלה - מוצג רק אם היישוב פתוח ב-State */}
             {expandedSettlements[city] && (
                 <div style={{ overflowX: 'auto', width: '100%', animation: 'fadeIn 0.2s ease-out' }}>
                     <table style={{...tableStyle, minWidth: isMobile ? '600px' : '100%'}}>
@@ -223,7 +216,6 @@ function MetersList() {
   );
 }
 
-// --- Styles (ללא שינוי) ---
 const containerStyle = { direction: 'rtl', backgroundColor: '#f4f7fa', minHeight: '100vh', boxSizing: 'border-box' };
 const headerStyle = { display: 'flex', justifyContent: 'space-between', marginBottom: '30px' };
 const addBtnStyle = { backgroundColor: '#3182ce', color: 'white', border: 'none', padding: '12px 24px', borderRadius: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 'bold' };

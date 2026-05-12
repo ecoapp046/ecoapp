@@ -1,6 +1,5 @@
 /* App.css */
 
-/* מחלקה לכרטיס (Card) לבן סטנדרטי שיחזור על עצמו במערכת */
 .card-container {
   background: white;
   border-radius: 12px;
@@ -9,7 +8,7 @@
   margin-bottom: 20px;
 }
 
-/* אפקט עדין למעבר בין דפים */
+
 .page-fade-in {
   animation: fadeIn 0.4s ease-out;
 }
@@ -19,7 +18,7 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* עיצוב גנרי לכפתורים אם תרצה להשתמש במחלקה */
+
 .btn-primary {
   background-color: #3182ce;
   color: white;
@@ -34,3 +33,4 @@
 .btn-primary:hover {
   opacity: 0.9;
 }
+

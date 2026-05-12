@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../api/api';
-import { X, Save, User, Phone, Mail, Users, MapPin, Info, Edit3 } from 'lucide-react';
+import { X, Save, User, Users, MapPin, Edit3, Navigation } from 'lucide-react';
 import { useIsMobile } from '../../hooks/useIsMobile';
 
 function EditMeterModal({ isOpen, onClose, meterData, onSuccess }) {
@@ -13,10 +13,12 @@ function EditMeterModal({ isOpen, onClose, meterData, onSuccess }) {
     email: '',
     residents_count: 1,
     address_detail: '',
-    status: 'פעיל'
+    status: 'פעיל',
+    type: 'משני',
+    walking_order: 1
   });
 
-  // טעינת הנתונים הקיימים לתוך הטופס כשהמודאל נפתח
+  // Load existing data when modal opens
   useEffect(() => {
     if (meterData && isOpen) {
       setFormData({
@@ -26,7 +28,9 @@ function EditMeterModal({ isOpen, onClose, meterData, onSuccess }) {
         email: meterData.email || '',
         residents_count: meterData.residents_count || 1,
         address_detail: meterData.address_detail || '',
-        status: meterData.status || 'פעיל'
+        status: meterData.status || 'פעיל',
+        type: meterData.type || 'משני',
+        walking_order: meterData.walking_order || 1
       });
     }
   }, [meterData, isOpen]);
@@ -37,16 +41,17 @@ function EditMeterModal({ isOpen, onClose, meterData, onSuccess }) {
     e.preventDefault();
     setLoading(true);
     try {
+      // Create copy of data to send
       const dataToSend = {
         ...formData,
-        residents_count: parseInt(formData.residents_count) || 0
+        residents_count: parseInt(formData.residents_count) || 0,
+        walking_order: parseInt(formData.walking_order) || 1
       };
       
-      // שימוש ב-api.put עם נתיב יחסי
       await api.put(`/update-meter/${meterData.id}`, dataToSend);
       
-      onSuccess(); // רענון הנתונים בדף הראשי
-      onClose();   // סגירת המודאל
+      onSuccess(); 
+      onClose();   
     } catch (error) {
       console.error("Update error:", error);
       alert("שגיאה בעדכון המונה. וודא שהשרת פעיל.");
@@ -59,8 +64,8 @@ function EditMeterModal({ isOpen, onClose, meterData, onSuccess }) {
     <div style={modalOverlayStyle}>
       <div style={{
         ...modalContentStyle, 
-        width: isMobile ? '95%' : '480px',
-        maxHeight: isMobile ? '90vh' : 'auto',
+        width: isMobile ? '95%' : '500px',
+        maxHeight: isMobile ? '95vh' : '90vh',
         overflowY: 'auto'
       }}>
         <div style={modalHeaderStyle}>
@@ -73,7 +78,6 @@ function EditMeterModal({ isOpen, onClose, meterData, onSuccess }) {
         
         <form onSubmit={handleSubmit} style={formStyle}>
           
-          {/* סעיף פרטי לקוח */}
           <div style={sectionTitleStyle}><User size={14}/> פרטי לקוח</div>
           <div style={{...gridRow, gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr'}}>
             <div style={inputGroup}>
@@ -110,8 +114,7 @@ function EditMeterModal({ isOpen, onClose, meterData, onSuccess }) {
             />
           </div>
 
-          {/* סעיף מיקום ומגורים */}
-          <div style={{...sectionTitleStyle, marginTop: '10px'}}><MapPin size={14}/> מיקום ומגורים</div>
+          <div style={{...sectionTitleStyle, marginTop: '10px'}}><MapPin size={14}/> מיקום ולוגיסטיקה</div>
           <div style={{...gridRow, gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr'}}>
             <div style={inputGroup}>
               <label style={labelStyle}>כתובת (רחוב)</label>
@@ -120,32 +123,62 @@ function EditMeterModal({ isOpen, onClose, meterData, onSuccess }) {
                 value={formData.address}
                 onChange={(e) => setFormData({...formData, address: e.target.value})}
                 style={inputStyle}
+                required
               />
             </div>
             <div style={inputGroup}>
-              <label style={labelStyle}>מספר נפשות</label>
-              <input 
-                type="number" 
-                min="1"
-                value={formData.residents_count}
-                onChange={(e) => setFormData({...formData, residents_count: e.target.value})}
-                style={inputStyle}
-              />
+              <label style={labelStyle}>סדר הליכה</label>
+              <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                <Navigation size={14} style={{ position: 'absolute', right: '10px', color: '#a0aec0' }} />
+                <input 
+                  type="number" 
+                  min="1"
+                  value={formData.walking_order}
+                  onChange={(e) => setFormData({...formData, walking_order: e.target.value})}
+                  style={{ ...inputStyle, paddingRight: '30px', width: '100%' }}
+                />
+              </div>
             </div>
           </div>
 
           <div style={inputGroup}>
-            <label style={labelStyle}>מיקום מפורט (דירה/כניסה/הערות)</label>
+            <label style={labelStyle}>מיקום מפורט</label>
             <input 
               type="text" 
               value={formData.address_detail}
               onChange={(e) => setFormData({...formData, address_detail: e.target.value})}
               style={inputStyle}
-              placeholder="לדוגמה: כניסה ב', קומה 2"
+              placeholder="דירה, קומה, כניסה..."
             />
           </div>
 
-          {/* סטטוס */}
+          <div style={{...gridRow, gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr'}}>
+            <div style={inputGroup}>
+              <label style={labelStyle}>מספר נפשות</label>
+              <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                <Users size={14} style={{ position: 'absolute', right: '10px', color: '#a0aec0' }} />
+                <input 
+                  type="number" 
+                  min="1"
+                  value={formData.residents_count}
+                  onChange={(e) => setFormData({...formData, residents_count: e.target.value})}
+                  style={{ ...inputStyle, paddingRight: '30px', width: '100%' }}
+                />
+              </div>
+            </div>
+            <div style={inputGroup}>
+              <label style={labelStyle}>סוג מונה (לא ניתן לשינוי)</label>
+              <select 
+                value={formData.type}
+                disabled={true} 
+                style={{...inputStyle, backgroundColor: '#f7fafc', cursor: 'not-allowed', color: '#718096'}}
+              >
+                <option value="משני">משני</option>
+                <option value="ראשי">ראשי</option>
+              </select>
+            </div>
+          </div>
+
           <div style={{...inputGroup, marginTop: '10px'}}>
             <label style={labelStyle}>סטטוס מונה</label>
             <select 
@@ -153,9 +186,9 @@ function EditMeterModal({ isOpen, onClose, meterData, onSuccess }) {
               onChange={(e) => setFormData({...formData, status: e.target.value})}
               style={{...inputStyle, backgroundColor: formData.status === 'מושבת' ? '#fff5f5' : '#fff'}}
             >
-              <option value="פעיל">✅ פעיל</option>
-              <option value="מושבת">❌ מושבת</option>
-              <option value="בתיקון">🛠️ בתיקון</option>
+              <option value="פעיל">פעיל</option>
+              <option value="מושבת">מושבת</option>
+              <option value="בתיקון">בתיקון</option>
             </select>
           </div>
 
@@ -177,7 +210,6 @@ function EditMeterModal({ isOpen, onClose, meterData, onSuccess }) {
   );
 }
 
-// --- Styles ---
 const modalOverlayStyle = { 
   position: 'fixed', 
   top: 0, left: 0, right: 0, bottom: 0, 
@@ -216,4 +248,4 @@ const footerActions = { display: 'flex', justifyContent: 'flex-end', marginTop: 
 const saveBtnStyle = { backgroundColor: '#3182ce', color: 'white', border: 'none', padding: '12px 20px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: 'bold' };
 const cancelBtnStyle = { backgroundColor: '#edf2f7', color: '#4a5568', border: 'none', padding: '12px 20px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', textAlign: 'center' };
 
-export default EditMeterModal;
+export default EditMeterModal; 

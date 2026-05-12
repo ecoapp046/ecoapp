@@ -14,7 +14,6 @@ function AddReadingModal({ isOpen, onClose, meterId, onSuccess }) {
 
     setLoading(true);
     try {
-      // שליחת הקריאה החדשה לשרת דרך ה-api המרכזי
       await api.post('/add-reading', {
         meter_id: meterId,
         value: parseFloat(value),
@@ -22,8 +21,8 @@ function AddReadingModal({ isOpen, onClose, meterId, onSuccess }) {
         technician: "מנהל מערכת"
       });
       
-      onSuccess(); // רענון הנתונים בדף האב
-      onClose();   // סגירת המודאל
+      onSuccess();
+      onClose();  
       setValue('');
     } catch (error) {
       console.error("Error adding reading:", error);

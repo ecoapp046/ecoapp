@@ -87,7 +87,6 @@ function TechnicianHome() {
       </header>
 
       {!selectedMeter ? (
-        /* שלב א: חיפוש מונה */
         <div style={{ animation: 'fadeIn 0.3s' }}>
           <div style={{ 
             display: 'flex', 
@@ -150,7 +149,6 @@ function TechnicianHome() {
           )}
         </div>
       ) : (
-        /* שלב ב: הזנת קריאה */
         <form onSubmit={handleSubmit} style={{ 
           display: 'flex', 
           flexDirection: 'column', 
@@ -178,7 +176,6 @@ function TechnicianHome() {
             </div>
           </div>
 
-          {/* כרטיס קריאה קודמת */}
           <div style={{ backgroundColor: '#f0f7ff', padding: '20px', borderRadius: '20px', textAlign: 'center', border: '1px dashed #007bff' }}>
             <span style={{ fontSize: '14px', color: '#0056b3', fontWeight: '500' }}>קריאה אחרונה במערכת:</span>
             <div style={{ fontSize: isMobile ? '36px' : '42px', fontWeight: '900', color: '#007bff', margin: '5px 0' }}>

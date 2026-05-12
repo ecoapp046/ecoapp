@@ -5,11 +5,9 @@ from datetime import datetime
 
 router = APIRouter()
 
-# --- 1. קבלת כל המונים (עבור המשרד) ---
 @router.get("/get-meters")
 async def get_meters():
     try:
-        # שליפת שמות היישובים מראש לייעול
         settlement_docs = db.collection("settlements").stream()
         settlements_map = {str(doc.id).strip(): doc.to_dict().get("settlement_name") for doc in settlement_docs}
 
@@ -35,13 +33,14 @@ async def get_meters():
                 "current_reading_date": data.get("current_reading_date", "—"),
                 "consumption": max(0, consumption),
                 "status": data.get("status", "פעיל"),
-                "address": data.get("address", "—")
+                "address": data.get("address", "—"),
+                "type": data.get("type", "משני"), # הוספת סוג המונה לרשימה
+                "walking_order": data.get("walking_order", 1) # הוספת סדר הליכה
             })
         return meters_list
     except Exception as e:
         raise HTTPException(status_code=500, detail="שגיאה בשליפת המונים")
 
-# --- 2. שליפת מונה בודד (מתוקן עם שם יישוב) ---
 @router.get("/get-meter/{meter_id}")
 async def get_meter(meter_id: str):
     doc_ref = db.collection("meters").document(meter_id.strip()).get()
@@ -51,7 +50,6 @@ async def get_meter(meter_id: str):
     data = doc_ref.to_dict()
     data["id"] = doc_ref.id
     
-    # הצלבת שם היישוב - התיקון כאן:
     s_id = str(data.get("settlement_id", "")).strip()
     if s_id:
         settlement_doc = db.collection("settlements").document(s_id).get()
@@ -62,7 +60,6 @@ async def get_meter(meter_id: str):
     else:
         data["settlement_name"] = "לא הוגדר יישוב"
 
-    # חישוב צריכה מהיר לתצוגה
     try:
         curr = float(data.get("current_reading", 0))
         last = float(data.get("last_reading", 0))
@@ -72,7 +69,6 @@ async def get_meter(meter_id: str):
 
     return data
 
-# --- 3. הוספת מונה חדש ---
 @router.post("/add-meter")
 async def add_meter(meter_data: Dict):
     m_id = str(meter_data.get("meter_id", "")).strip()
@@ -86,28 +82,46 @@ async def add_meter(meter_data: Dict):
     now = datetime.now()
     now_str = now.strftime("%d/%m/%Y %H:%M")
     
-    # הגדרת ערכי ברירת מחדל
-    meter_data.setdefault("current_reading", "0")
-    meter_data.setdefault("last_reading", "0")
-    meter_data["created_at"] = now_str  # הוספת תאריך יצירה למונה עצמו
-
+    # עיבוד נתונים חדשים מהפרונטנד
     try:
+        # המרת מספרים לפורמט תקין
+        current_reading = str(meter_data.get("current_reading", "0"))
+        walking_order = int(meter_data.get("walking_order", 1))
+        residents_count = int(meter_data.get("residents_count", 1))
+        
+        # בניית אובייקט הנתונים לשמירה ב-Firestore
+        final_data = {
+            "meter_id": m_id,
+            "customer_name": meter_data.get("customer_name", "ללא שם"),
+            "settlement_id": str(meter_data.get("settlement_id", "")).strip(),
+            "address": meter_data.get("address", ""),
+            "address_detail": meter_data.get("address_detail", ""),
+            "phone": meter_data.get("phone", ""),
+            "email": meter_data.get("email", ""),
+            "residents_count": residents_count,
+            "current_reading": current_reading,
+            "last_reading": "0",
+            "status": meter_data.get("status", "פעיל"),
+            "type": meter_data.get("type", "משני"), # שדה סוג מונה
+            "walking_order": walking_order, # שדה סדר הליכה
+            "created_at": now_str,
+            "last_update": now_str
+        }
+
         batch = db.batch()
+        batch.set(doc_ref, final_data)
         
-        # 1. יצירת המונה
-        batch.set(doc_ref, meter_data)
-        
-        # 2. יצירת רשומת היסטוריה ראשונה - "פתיחת מונה"
+        # יצירת רשומת היסטוריה
         history_ref = db.collection("readings").document()
         batch.set(history_ref, {
             "meter_id": m_id,
             "date_display": now_str,
             "timestamp": now,
-            "value": meter_data.get("current_reading", "0"),
+            "value": current_reading,
             "previous_value": "0",
             "log_type": "CREATION",
             "technician": "מערכת",
-            "note": "פתיחת מונה חדש במערכת"
+            "note": f"פתיחת מונה {final_data['type']} חדש (סדר הליכה: {walking_order})"
         })
         
         batch.commit()
@@ -115,7 +129,6 @@ async def add_meter(meter_data: Dict):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"שגיאה ביצירה: {str(e)}")
 
-# --- 4. החלפת מונה (Full Replace) ---
 @router.put("/update-meter-full/{old_id}")
 async def update_meter_full(old_id: str, data: dict):
     try:
@@ -167,9 +180,10 @@ async def update_meter_full(old_id: str, data: dict):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# --- 5. עדכון/מחיקה/יישובים ---
 @router.put("/update-meter/{meter_id}")
 async def update_meter(meter_id: str, data: dict):
+    # הוספת עדכון תאריך עדכון אחרון
+    data["last_update"] = datetime.now().strftime("%d/%m/%Y %H:%M")
     db.collection("meters").document(meter_id.strip()).update(data)
     return {"status": "success"}
 

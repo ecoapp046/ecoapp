@@ -20,11 +20,9 @@ const Dashboard = () => {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        // שינוי מקור הנתונים ל-get-tasks כדי לקבל את המשימות האמיתיות
         const res = await api.get('/get-tasks');
         const tasks = res.data;
         
-        // קיבוץ משימות שאינן "הושלם" לפי יישוב
         const grouped = tasks.reduce((acc, task) => {
           if (task.status !== 'הושלם') {
             const settlement = task.location || 'ללא יישוב';
@@ -128,7 +126,6 @@ const SettlementCard = ({ name, count, onClick }) => (
   </div>
 );
 
-// --- Styles (נשארים זהים עם שיפור קטן לכרטיס) ---
 const containerStyle = { direction: 'rtl', minHeight: '100vh', backgroundColor: '#f7fafc', boxSizing: 'border-box' };
 const headerStyle = { marginBottom: '25px' };
 const titleStyle = { fontWeight: 'bold', color: '#1a202c', margin: 0 };

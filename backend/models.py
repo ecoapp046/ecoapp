@@ -25,12 +25,12 @@ class Task(BaseModel):
     status: str = "פתוח"
     assigned_to: Optional[str] = ""
     type: Optional[str] = "נזילה"
-    location: Optional[str] = ""         # ישוב
-    address: Optional[str] = ""          # כתובת
-    neighborhood: Optional[str] = ""     # שכונה
-    water_line: Optional[str] = ""       # קו מים
-    depth: Optional[str] = ""            # עומק קו
-    notes: Optional[str] = ""            # הערות
+    location: Optional[str] = ""      
+    address: Optional[str] = ""          
+    neighborhood: Optional[str] = ""     
+    water_line: Optional[str] = ""     
+    depth: Optional[str] = ""         
+    notes: Optional[str] = ""           
     due_date: Optional[str] = ""         
-    # שדה המונים עבור סבב קריאות
     meters_to_read: Optional[List[Dict]] = []
+    selected_meter_id: Optional[str] = None # Important for the link
